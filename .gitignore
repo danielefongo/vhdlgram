@@ -90,3 +90,4 @@ $RECYCLE.BIN/
 output_files/
 db/
 incremental_db/
+!LICENSE

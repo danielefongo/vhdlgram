@@ -14,7 +14,7 @@ package nonogram_package is
 	constant MAX_CLUE_COLUMN		: integer := 15; -- CEIL(MAX_COLUMN / 2)
 	constant MAX_CLUE_LINE			: integer := 20; -- CEIL(MAX_LINE / 2)
 	
-	constant MAX_LEVEL				: integer := 3;
+	constant MAX_LEVEL				: integer := 4;
 	constant MAX_ITERATION			: integer := 100;
 	
 	--TYPES
@@ -55,8 +55,6 @@ package nonogram_package is
 	
 	type level_array_type is array(integer range 0 to MAX_LEVEL - 1) of level_type;
 	
-	
-	
 	--FUNCTIONS
 	
 	--board
@@ -66,19 +64,6 @@ package nonogram_package is
 	--clues
 	function get_clue_row_length(level : integer; index : integer range 0 to MAX_COLUMN) return integer;
 	function get_clue_column_length(level : integer; index : integer range 0 to MAX_ROW) return integer;
-	
-	
-	
-
-	
-	
-	
-	
-	
-	
-	
-	
-	
 	
 	--CONSTANTS
 	constant EMPTY_LEVEL : level_type :=
@@ -127,7 +112,7 @@ package nonogram_package is
 			),
 			full_cells		=>
 			(
-				(0,0),
+				(0,3),
 				others => (-1, -1)
 			),
 			empty_cells		=>
@@ -161,6 +146,71 @@ package nonogram_package is
 			empty_cells		=>
 			(
 				(1,2),
+				others => (-1, -1)
+			)
+		),
+		(
+			rows 				=> 10,
+			columns			=> 9,
+			clue_rows		=> 
+			(
+				(1,1, others => -1),
+				(3,3, others => -1),
+				(1,1,1, others => -1),
+				(1,1, others => -1),
+				(1,1, others => -1),
+				(1,1, others => -1),
+				(1,1, others => -1),
+				(1,1, others => -1),
+				(3, others => -1),
+				(1, others => -1),
+				others => (others => -1)
+			),
+			clue_columns	=> 
+			(
+				(4, others => -1),
+				(1,1, others => -1),
+				(2,1, others => -1),
+				(1,1, others => -1),
+				(1,2, others => -1),
+				(1,1, others => -1),
+				(2,1, others => -1),
+				(1,1, others => -1),
+				(4, others => -1),
+				others => (others => -1)
+			),
+			full_cells		=>
+			(
+				(0,2),
+				(0,3),
+				(0,4),
+				(0,5),
+				(1,1),
+				(1,6),
+				(2,0),
+				(2,1),
+				(2,7),
+				(3,1),
+				(3,8),
+				(4,2),
+				(4,8),
+				(4,9),
+				(5,1),
+				(5,8),
+				(6,0),
+				(6,1),
+				(6,7),
+				(7,1),
+				(7,6),
+				(8,2),
+				(8,3),
+				(8,4),
+				(8,5),
+				(0,3),
+				others => (-1, -1)
+			),
+			empty_cells		=>
+			(
 				others => (-1, -1)
 			)
 		),
@@ -199,22 +249,24 @@ package body nonogram_package is
 	function load_board(level : integer range 0 to MAX_LEVEl - 1) return board_type is
 	variable result : board_type := (others => (others => INVALID));
 	begin
-		for x in 0 to MAX_ROW loop
-			exit when(x >= LEVEL_INPUT(LEVEL).columns);
-			for y in 0 to MAX_COLUMN loop
-				exit when(y >= LEVEL_INPUT(LEVEL).rows);
-				result(x, y) := UNDEFINED;
+		for x in 0 to MAX_ROW - 1 loop
+			for y in 0 to MAX_COLUMN - 1 loop
+				if(x < LEVEL_INPUT(level).columns and y < LEVEL_INPUT(level).rows) then 
+					result(x, y) := UNDEFINED;
+				end if;
 			end loop;
 		end loop;
 		
 		for i in 0 to MAX_ROW * MAX_COLUMN - 1 loop
-			exit when(LEVEL_INPUT(LEVEL).full_cells(i) = (-1,-1));
-			result(LEVEL_INPUT(LEVEL).full_cells(i).x, LEVEL_INPUT(LEVEL).full_cells(i).y) := FULL;
+			if(LEVEL_INPUT(level).empty_cells(i).x /= -1 and LEVEL_INPUT(level).empty_cells(i).y /= -1) then
+				result(LEVEL_INPUT(level).empty_cells(i).x, LEVEL_INPUT(level).empty_cells(i).y) := EMPTY;
+			end if;
 		end loop;
 		
 		for i in 0 to MAX_ROW * MAX_COLUMN - 1 loop
-			exit when(LEVEL_INPUT(LEVEL).empty_cells(i) = (-1,-1));
-			result(LEVEL_INPUT(LEVEL).empty_cells(i).x, LEVEL_INPUT(LEVEL).empty_cells(i).y) := EMPTY;
+			if(LEVEL_INPUT(level).full_cells(i).x /= -1 and LEVEL_INPUT(level).full_cells(i).y /= -1) then
+				result(LEVEL_INPUT(level).full_cells(i).x, LEVEL_INPUT(level).full_cells(i).y) := FULL;
+			end if;
 		end loop;
 		
 		return result;

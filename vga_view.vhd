@@ -154,7 +154,7 @@ begin
 							-- TODO: elsif show_status
 							
 							else --rest of the window
-								send_color(TEAL); --TODO: change to black.
+								send_color(BLACK); --TODO: change to black.
 							end if;
 						end if;
 					end if;

@@ -100,6 +100,8 @@ begin
 	begin
 		if(SW(17) = '1') then
 			level <= 0;
+		elsif(SW(16) = '1') then
+			level <= 1;
 		else
 			level <= -1;
 		end if;

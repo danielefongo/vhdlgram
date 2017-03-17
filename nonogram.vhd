@@ -29,8 +29,8 @@ entity nonogram is
 		HEX1						: out std_logic_vector(6 to 0);
 		HEX0						: out std_logic_vector(6 to 0);
 		
-		LERG						: out std_logic_vector(8 to 0);
-		LEDR						: out std_logic_vector(17 to 0)
+		LERG						: out std_logic_vector(8 to 0) := (others => '0');
+		LEDR						: out std_logic_vector(17 to 0) := (others => '0')
 	);
 	
 end nonogram;
@@ -42,7 +42,7 @@ architecture RTL of nonogram is
 	signal vga_clock				: std_logic;
 	signal reset_n					: std_logic;
 	signal reset_sync				: std_logic;
-	signal level					: integer range 0 to MAX_LEVEL - 1;
+	signal level					: integer range -1 to MAX_LEVEL - 1;
 	signal status					: status_type;
 	signal ack						: status_type;
 	signal row_index				: integer range 0 to MAX_COLUMN - 1;
@@ -60,6 +60,26 @@ begin
 				c0			=> clock,
 				c1			=> vga_clock
 		);
+		
+	vga_view : entity work.vga_view
+		port map 
+		(
+			CLOCK						=> vga_clock,			
+			RESET_N					=> reset_n,
+			VGA_R						=> VGA_R,
+			VGA_G						=> VGA_G,
+			VGA_B						=> VGA_B,
+			VGA_HS					=> VGA_HS,
+			VGA_VS					=> VGA_VS,
+			VGA_SYNC_N				=> VGA_SYNC_N,
+			VGA_BLANK_N				=> VGA_BLANK_N,
+			
+			ROW_DESCRIPTION		=> row_description,
+			ROW_INDEX				=> row_index,
+			
+			LEVEL						=> level,
+			STATUS					=> status
+		);	
 	
 	-- processes
 	reset : process(clock)
@@ -73,6 +93,17 @@ begin
 	vga_clock_forward : process(vga_clock)
 	begin
 		VGA_CLK <= vga_clock;
+	end process;
+	
+	--pseudodatapath TODO: implement real datapath
+	pseudo_datapath : process(clock, reset_n)
+	begin
+		if(SW(17) = '1') then
+			level <= 0;
+		else
+			level <= -1;
+		end if;
+		row_description <= (FULL, UNDEFINED, EMPTY, others=>(INVALID));
 	end process;
 		
 end architecture;

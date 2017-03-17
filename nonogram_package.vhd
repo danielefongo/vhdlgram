@@ -74,7 +74,7 @@ package nonogram_package is
 		)
 	);
 
-	constant INPUT : level_array_type :=
+	constant LEVEL_INPUT : level_array_type :=
 	(
 		(
 			rows 				=> 3,
@@ -107,8 +107,45 @@ package nonogram_package is
 		others => EMPTY_LEVEL
 	);
 	
+	--FUNCTIONS
+	
+	function get_clue_row_length(level : integer; index : integer range 0 to MAX_COLUMN) return integer;
+	function get_clue_column_length(level : integer; index : integer range 0 to MAX_ROW) return integer;
+	
 end package;
 
 package body nonogram_package is
 
+	function get_clue_row_length(level : integer range 0 to MAX_LEVEL - 1; index : integer range 0 to MAX_COLUMN) return integer is
+		variable result : integer := 0;
+	begin
+		if(LEVEL_INPUT(level).columns <= index) then
+			return -1;
+		else	
+			for i in 0 to MAX_CLUE_ROW loop
+			if(LEVEL_INPUT(level).clue_rows(index, i) > 0) then
+				result := result + 1;
+			else
+				return result;
+			end if;
+		end loop;
+		end if;
+	end function;
+	
+	function get_clue_column_length(level : integer range 0 to MAX_LEVEL - 1; index : integer range 0 to MAX_ROW) return integer is
+		variable result : integer := 0;
+	begin
+		if(LEVEL_INPUT(level).rows <= index) then
+			return -1;
+		else	
+			for i in 0 to MAX_CLUE_COLUMN loop
+			if(LEVEL_INPUT(level).clue_columns(index, i) > 0) then
+				result := result + 1;
+			else
+				return result;
+			end if;
+		end loop;
+		end if;
+	end function;
+	
 end package body;

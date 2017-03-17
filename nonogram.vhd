@@ -22,15 +22,15 @@ entity nonogram is
 		VGA_BLANK_N				: out std_logic;
 		VGA_CLK					: out std_logic;
 		
-		HEX7						: out std_logic_vector(6 to 0);
-		HEX6						: out std_logic_vector(6 to 0);
-		HEX3						: out std_logic_vector(6 to 0);
-		HEX2						: out std_logic_vector(6 to 0);
-		HEX1						: out std_logic_vector(6 to 0);
-		HEX0						: out std_logic_vector(6 to 0);
+		HEX7						: out std_logic_vector(6 downto 0) := "0000000";
+		HEX6						: out std_logic_vector(6 downto 0);
+		HEX3						: out std_logic_vector(6 downto 0);
+		HEX2						: out std_logic_vector(6 downto 0);
+		HEX1						: out std_logic_vector(6 downto 0);
+		HEX0						: out std_logic_vector(6 downto 0);
 		
-		LERG						: out std_logic_vector(8 to 0) := (others => '0');
-		LEDR						: out std_logic_vector(17 to 0) := (others => '0')
+		LEDG						: out std_logic_vector(8 downto 0);
+		LEDR						: out std_logic_vector(17 downto 0)
 	);
 	
 end nonogram;
@@ -79,7 +79,22 @@ begin
 			
 			LEVEL						=> level,
 			STATUS					=> status
-		);	
+		);
+		
+	controller : entity work.controller
+		port map
+		(
+			CLOCK						=> clock,
+			RESET_N					=> reset_n,
+			
+			SW							=> SW(17 downto 1),
+			LEVEL						=> level,
+			
+			ACK						=> ack,
+			STATUS					=> status,
+			
+			KEY						=> KEY(3 downto 2)
+		);
 	
 	-- processes
 	reset : process(clock)
@@ -98,14 +113,31 @@ begin
 	--pseudodatapath TODO: implement real datapath
 	pseudo_datapath : process(clock, reset_n)
 	begin
-		if(SW(17) = '1') then
-			level <= 0;
-		elsif(SW(16) = '1') then
-			level <= 1;
-		else
-			level <= -1;
-		end if;
 		row_description <= (FULL, UNDEFINED, EMPTY, others=>(INVALID));
+		ACK <= status;
+	end process;
+	
+	--debugging
+	led_debugging : process(clock, reset_n)
+	begin
+		if(reset_n = '0') then
+			LEDG <= "000000000";
+		elsif(rising_edge(clock)) then
+			case(status) is
+				when IDLE =>
+					LEDG <= "010000000";
+				when LOAD =>
+					LEDG <= "001000000";
+				when SOLVE_ITERATION =>
+					LEDG <= "000100000";
+				when SOLVE_ALL =>
+					LEDG <= "000010000";
+				when WON	=>
+					LEDG <= "000001000";
+				when LOST =>
+					LEDG <= "000000100";
+			end case;
+		end if;
 	end process;
 		
 end architecture;

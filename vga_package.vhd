@@ -9,18 +9,18 @@ package vga_package is
 	
 	--CONSTANTS
 	--screen
-	constant VISIBLE_WIDTH    : natural := 640;
-	constant VISIBLE_HEIGHT   : natural := 480;
+	constant VISIBLE_WIDTH    : integer := 640;
+	constant VISIBLE_HEIGHT   : integer := 480;
 
 	--vertical sync
-	constant VERTICAL_FRONT_PORCH : natural := 10;
-	constant VERTICAL_SYNC_PULSE : natural := 2;
-	constant VERTICAL_BACK_PORCH : natural := 33;
+	constant VERTICAL_FRONT_PORCH : integer := 10;
+	constant VERTICAL_SYNC_PULSE : integer := 2;
+	constant VERTICAL_BACK_PORCH : integer := 33;
 
 	--horizontal sync
-	constant HORIZONTAL_FRONT_PORCH : natural := 16;
-	constant HORIZONTAL_SYNC_PULSE : natural := 96;
-	constant HORIZONTAL_BACK_PORCH : natural := 48;
+	constant HORIZONTAL_FRONT_PORCH : integer := 16;
+	constant HORIZONTAL_SYNC_PULSE : integer := 96;
+	constant HORIZONTAL_BACK_PORCH : integer := 48;
 	
 	--VGA screen
 	constant TOTAL_H: integer := VERTICAL_FRONT_PORCH + VERTICAL_SYNC_PULSE +VERTICAL_BACK_PORCH + VISIBLE_HEIGHT; --525
@@ -42,12 +42,15 @@ package vga_package is
 	constant RED				: 	color_type 	:= X"FF0000";
 	constant GREEN				: 	color_type 	:= X"00FF00";
 	constant BLUE				: 	color_type 	:= X"0000FF";
+	constant VIOLET			:	color_type	:= X"FF00FF";
+	constant YELLOW			:	color_type	:= X"FFFF00";
+	constant TEAL				:	color_type	:= X"008888";
 	
 	constant LINE_COLOR		:	color_type 	:= WHITE;
 	constant INVALID_COLOR	:	color_type	:= RED;
-	constant UNDEFINED_COLOR:	color_type	:= BLACK;
-	constant EMPTY_COLOR		:	color_type	:= BLUE;
-	constant FULL_COLOR		:	color_type	:= GREEN;
+	constant UNDEFINED_COLOR:	color_type	:= TEAL;
+	constant EMPTY_COLOR		:	color_type	:= WHITE;
+	constant FULL_COLOR		:	color_type	:= BLACK;
 	constant NUMBER_COLOR 	:	color_type 	:= WHITE;
 	
 	--FUNCTIONS

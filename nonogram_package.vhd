@@ -27,18 +27,21 @@ package nonogram_package is
 	attribute enum_encoding of cell_type : type is "sequential";
 	
 	type cell_position_type is record
-		row	: integer range -1 to (MAX_ROW - 1); -- -1 for invalid cell position
-		col	: integer range -1 to (MAX_COLUMN - 1); -- -1 for invalid cell position
+		x				: integer range -1 to (MAX_ROW - 1); -- -1 for invalid cell position
+		y				: integer range -1 to (MAX_COLUMN - 1); -- -1 for invalid cell position
 	end record;
 	
-	type cell_array_position_type is array(natural range <>) of cell_position_type;
+	type cell_array_position_type is array(integer range <>) of cell_position_type;
+	
+	--board
+	type board_type is array(integer range 0 to MAX_ROW - 1, integer range 0 to MAX_COLUMN - 1) of cell_type;
 	
 	--lines
 	type line_type is array(0 to (MAX_LINE - 1)) of cell_type;
 	
 	--clues
 	subtype clue_type is integer range -1 to MAX_CLUE; -- -1 for invalid clue
-	type clue_matrix_type is array(natural range <>, natural range <>) of clue_type; 
+	type clue_matrix_type is array(integer range <>, integer range <>) of clue_type; 
 	
 	--levels
 	type level_type is record
@@ -50,8 +53,34 @@ package nonogram_package is
 		empty_cells		:	cell_array_position_type(0 to MAX_ROW * MAX_COLUMN - 1);
 	end record;
 	
-	type level_array_type is array(natural range 0 to MAX_LEVEL - 1) of level_type;
+	type level_array_type is array(integer range 0 to MAX_LEVEL - 1) of level_type;
 	
+	
+	
+	--FUNCTIONS
+	
+	--board
+	function get_board_line(board : board_type; transposed : integer range 0 to 1; index : integer range 0 to MAX_LINE) return line_type;
+	function load_board(level : integer range 0 to MAX_LEVEl - 1) return board_type;
+	
+	--clues
+	function get_clue_row_length(level : integer; index : integer range 0 to MAX_COLUMN) return integer;
+	function get_clue_column_length(level : integer; index : integer range 0 to MAX_ROW) return integer;
+	
+	
+	
+
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	--CONSTANTS
 	constant EMPTY_LEVEL : level_type :=
 	(
 		rows 				=> 0,
@@ -103,7 +132,7 @@ package nonogram_package is
 			),
 			empty_cells		=>
 			(
-				(1,1),
+				(2,1),
 				others => (-1, -1)
 			)
 		),
@@ -138,15 +167,60 @@ package nonogram_package is
 		others => EMPTY_LEVEL
 	);
 	
-	--FUNCTIONS
-	
-	function get_clue_row_length(level : integer; index : integer range 0 to MAX_COLUMN) return integer;
-	function get_clue_column_length(level : integer; index : integer range 0 to MAX_ROW) return integer;
-	
 end package;
 
 package body nonogram_package is
-
+	
+	--FUNCTIONS
+	--board
+	function get_board_line(board : board_type; transposed : integer range 0 to 1; index : integer range 0 to MAX_LINE) return line_type is
+		variable result : line_type := (others => INVALID);
+		variable max_i : integer := 0;
+	begin
+		if(transposed = 0) then
+			max_i := MAX_ROW - 1;
+		else
+			max_i := MAX_COLUMN - 1;
+		end if;
+		
+		for i in 0 to max_i loop
+			if(transposed = 0) then
+				result(i) := board(i, index);
+			else
+				result(i) := board(index, i);
+			end if;
+			if(result(i) = INVALID) then
+				return result;
+			end if;
+		end loop;
+		return result;
+	end function;
+	
+	function load_board(level : integer range 0 to MAX_LEVEl - 1) return board_type is
+	variable result : board_type := (others => (others => INVALID));
+	begin
+		for x in 0 to MAX_ROW loop
+			exit when(x >= LEVEL_INPUT(LEVEL).columns);
+			for y in 0 to MAX_COLUMN loop
+				exit when(y >= LEVEL_INPUT(LEVEL).rows);
+				result(x, y) := UNDEFINED;
+			end loop;
+		end loop;
+		
+		for i in 0 to MAX_ROW * MAX_COLUMN - 1 loop
+			exit when(LEVEL_INPUT(LEVEL).full_cells(i) = (-1,-1));
+			result(LEVEL_INPUT(LEVEL).full_cells(i).x, LEVEL_INPUT(LEVEL).full_cells(i).y) := FULL;
+		end loop;
+		
+		for i in 0 to MAX_ROW * MAX_COLUMN - 1 loop
+			exit when(LEVEL_INPUT(LEVEL).empty_cells(i) = (-1,-1));
+			result(LEVEL_INPUT(LEVEL).empty_cells(i).x, LEVEL_INPUT(LEVEL).empty_cells(i).y) := EMPTY;
+		end loop;
+		
+		return result;
+	end function;
+	
+	--clues
 	function get_clue_row_length(level : integer range 0 to MAX_LEVEL - 1; index : integer range 0 to MAX_COLUMN) return integer is
 		variable result : integer := 0;
 	begin

@@ -22,7 +22,7 @@ entity nonogram is
 		VGA_BLANK_N				: out std_logic;
 		VGA_CLK					: out std_logic;
 		
-		HEX7						: out std_logic_vector(6 downto 0) := "0000000";
+		HEX7						: out std_logic_vector(6 downto 0);
 		HEX6						: out std_logic_vector(6 downto 0);
 		HEX3						: out std_logic_vector(6 downto 0);
 		HEX2						: out std_logic_vector(6 downto 0);
@@ -48,7 +48,7 @@ architecture RTL of nonogram is
 	signal row_index				: integer range 0 to MAX_COLUMN - 1;
 	signal row_description		: line_type;
 	signal iteration				: integer range 0 to MAX_ITERATION - 1;
-	signal undefined_cells		: integer range 0 to MAX_ROW * MAX_COLUMN - 1;
+	signal undefined_cells		: integer range 0 to MAX_ROW * MAX_COLUMN;
 	
 begin
 	
@@ -96,6 +96,23 @@ begin
 			KEY						=> KEY(3 downto 2)
 		);
 	
+	datapath : entity work.datapath
+		port map
+		(
+			CLOCK						=> clock,
+			RESET_N					=> reset_n,
+			
+			LEVEL						=> level,
+			ROW_INDEX				=> row_index,
+			ROW_DESCRIPTION		=> row_description,
+			
+			STATUS					=> status,
+			ACK						=> ack,
+			
+			ITERATION				=> iteration,
+			UNDEFINED_CELLS		=> undefined_cells
+		);
+	
 	-- processes
 	reset : process(clock)
 	begin
@@ -108,13 +125,6 @@ begin
 	vga_clock_forward : process(vga_clock)
 	begin
 		VGA_CLK <= vga_clock;
-	end process;
-	
-	--pseudodatapath TODO: implement real datapath
-	pseudo_datapath : process(clock, reset_n)
-	begin
-		row_description <= (FULL, UNDEFINED, EMPTY, others=>(INVALID));
-		ACK <= status;
 	end process;
 	
 	--debugging

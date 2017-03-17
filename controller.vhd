@@ -37,10 +37,10 @@ architecture RTL of controller is
 	signal level_update_status				: level_update_status_type := L_IDLE;
 	
 	signal status_register					: status_type := IDLE;
-	--processes
 
 begin
 	
+	--processes
 	key3_debouncer : process(CLOCK, RESET_N)
 	begin
 		if(RESET_N = '0') then

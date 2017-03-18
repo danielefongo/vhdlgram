@@ -87,57 +87,6 @@ begin
 		end if;
 	end process;
 	
-	/*
-	level_select : process(CLOCK, RESET_N)
-	begin
-		if(RESET_N = '0') then
-			level_update_register <= '1';
-			level_register <= -1;
-			level_update_status <= LEVEL_IDLE;
-			LEVEL <= -1;
-		elsif(rising_edge(CLOCK)) then 
-			case(level_update_status) is --TODO: check this
-				when LEVEL_IDLE =>
-					if(SW(17) = '1') then
-						if(level_register /= 0) then
-							level_update_register <= '1';
-							level_update_status <= LEVEL_UPDATING;
-						end if;
-						level_register <= 0;
-						LEVEL <= 0;
-					elsif(SW(16) = '1' ) then
-						if(level_register /= 1) then
-							level_update_register <= '1';
-							level_update_status <= LEVEL_UPDATING;
-						end if;
-						level_register <= 1;
-						LEVEL <= 1;
-					elsif(SW(15) = '1') then
-						if(level_register /= 2) then
-							level_update_register <= '1';
-							level_update_status <= LEVEL_UPDATING;
-						end if;
-						level_register <= 2;
-						LEVEL <= 2;
-					else
-						if(level_register /= -1) then
-							level_update_register <= '1';
-							level_update_status <= LEVEL_UPDATING;
-						end if;
-						level_register <= -1;
-						LEVEL <= -1;
-					end if;
-				when LEVEL_UPDATING =>
-					level_update_register <= '0';
-					level_register <= level_register;
-					LEVEL <= level_register;
-					level_update_status <= LEVEL_IDLE;
-			end case;
-
-		end if;
-	end process;
-	*/
-	
 	status_update : process(CLOCK, RESET_N)
 	begin
 		if(RESET_N = '0') then
@@ -165,7 +114,7 @@ begin
 			elsif(SW(17 downto 14) = "0000") then
 				LEVEL <= -1;
 				level_register <= -1;
-				status_register <= LOAD;
+				status_register <= IDLE;
 			else
 				case(status_register) is
 					when IDLE =>

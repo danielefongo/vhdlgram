@@ -29,6 +29,9 @@ architecture RTL of datapath is
 	type solver_status_type is (S_IDLE, S_ANALYZING, S_SIMPLE_BLOCKS, S_SIMPLE_SPACES, S_FINALIZING, S_CHECKING);
 	signal solver_status_register			: solver_status_type := S_IDLE;
 	
+	type loader_status_type is (L_IDLE, L_LOADING, L_ACK);
+	signal loader_status_register			: loader_status_type := L_IDLE;
+	
 	signal ack_register						: status_type := IDLE;
 	
 	signal iteration_register				: integer range 0 to MAX_ITERATION;
@@ -38,6 +41,29 @@ architecture RTL of datapath is
 	signal constraints 						: constraint_matrix_type;
 	
 	--procedures
+	procedure load_procedure is
+	begin
+		case(loader_status_register) is
+			when L_IDLE =>
+				ack_register <= IDLE;
+				board <= load_board(LEVEL);
+				constraints <= load_constraints(LEVEL);
+				loader_status_register <= L_LOADING;
+			when L_LOADING =>
+				if(check_board(LEVEL, board)) then
+					loader_status_register <= L_ACK;
+				else
+					board <= load_board(LEVEL);
+					constraints <= load_constraints(LEVEL);
+					loader_status_register <= L_LOADING;
+				end if;
+			when L_ACK =>
+				iteration_register <= 0;
+				ack_register <= LOAD;
+				loader_status_register <= L_IDLE;
+		end case;
+	end load_procedure;
+	
 	procedure solve_procedure(operation : integer range 0 to 1) is
 	begin
 		case(solver_status_register) is
@@ -99,16 +125,10 @@ begin
 			case(STATUS) is
 				when IDLE =>
 					undefined_cells_register <= get_undefined_cells(board);
+					loader_status_register <= L_IDLE;
 					ack_register <= IDLE;
 				when LOAD =>
-					iteration_register <= 0;
-					board <= load_board(LEVEL);
-					constraints <= load_constraints(LEVEL);
-					if(board(0,0) /= INVALID) then --TODO: remove asap
-						ack_register <= LOAD;
-					else
-						ack_register <= IDLE;
-					end if;
+					load_procedure;
 				when SOLVE_ITERATION =>
 					solve_procedure(0);
 				when SOLVE_ALL =>

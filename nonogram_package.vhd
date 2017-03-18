@@ -75,6 +75,7 @@ package nonogram_package is
 	--board
 	function get_board_line(board : board_type; transposed : integer range 0 to 1; index : integer range 0 to MAX_LINE) return line_type;
 	function load_board(level : integer range -1 to MAX_LEVEl - 1) return board_type;
+	function check_board(level : integer range -1 to MAX_LEVEl - 1; board : board_type) return boolean;
 	function get_undefined_cells(board : board_type) return integer;
 	
 	--clues
@@ -286,6 +287,41 @@ package body nonogram_package is
 		end if;
 		
 		return result;
+	end function;
+	
+	function check_board(level : integer range -1 to MAX_LEVEl - 1; board : board_type) return boolean is
+	begin
+		if(level < 0) then
+			return false;
+		else
+			for x in 0 to MAX_ROW - 1 loop
+				for y in 0 to MAX_COLUMN - 1 loop
+					if(x < LEVEL_INPUT(level).dim(0) and y < LEVEL_INPUT(level).dim(1)) then 
+						if(board(x,y) = INVALID) then
+							return false;
+						end if;
+					end if;
+				end loop;
+			end loop;
+			
+			for i in 0 to MAX_ROW * MAX_COLUMN - 1 loop
+				if(LEVEL_INPUT(level).empty_cells(i).x /= -1 and LEVEL_INPUT(level).empty_cells(i).y /= -1) then
+					if(board(LEVEL_INPUT(level).empty_cells(i).x, LEVEL_INPUT(level).empty_cells(i).y) /= EMPTY) then
+						return false;
+					end if;
+				end if;
+			end loop;
+			
+			for i in 0 to MAX_ROW * MAX_COLUMN - 1 loop
+				if(LEVEL_INPUT(level).full_cells(i).x /= -1 and LEVEL_INPUT(level).full_cells(i).y /= -1) then
+					if(board(LEVEL_INPUT(level).full_cells(i).x, LEVEL_INPUT(level).full_cells(i).y) /= FULL) then
+						return false;
+					end if;
+				end if;
+			end loop;
+		end if;
+		
+		return true;
 	end function;
 	
 	function get_undefined_cells(board : board_type) return integer is

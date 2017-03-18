@@ -1,3 +1,4 @@
+
 library ieee;
 use ieee.numeric_std.all;
 use ieee.std_logic_1164.all;
@@ -41,18 +42,24 @@ package nonogram_package is
 	
 	--clues
 	subtype clue_type is integer range -1 to MAX_CLUE; -- -1 for invalid clue
-	type clue_matrix_type is array(integer range <>, integer range <>) of clue_type; 
+	type clue_matrix_type is array(integer range <>, integer range <>, integer range <>) of clue_type; 
+
+	--constraints
+	type constraint_type is record
+		size				: integer range -1 to MAX_CLUE - 1;
+		min_start		: integer range 0 to MAX_LINE - 1;
+		max_end			: integer range 0 to MAX_LINE - 1;
+	end record;
+	type constraint_matrix_type is array(integer range 0 to 1, integer range 0 to MAX_LINE - 1, integer range 0 to MAX_CLUE_LINE) of constraint_type;
 	
 	--levels
+	type dim_type is array(integer range <>) of integer range 0 to MAX_LINE - 1;
 	type level_type is record
-		rows				:	integer range 0 to MAX_COLUMN;
-		columns			:	integer range 0 to MAX_ROW;
-		clue_rows		:	clue_matrix_type(0 to MAX_COLUMN - 1, 0 to MAX_CLUE_ROW - 1);
-		clue_columns	: 	clue_matrix_type(0 to MAX_ROW - 1, 0 to MAX_CLUE_COLUMN - 1);
+		dim				: 	dim_type(0 to 1); --Be careful. Max real dimension is 30x40.
+		clues				:	clue_matrix_type(0 to 1, 0 to MAX_LINE - 1, 0 to MAX_CLUE_LINE - 1);
 		full_cells		:	cell_array_position_type(0 to MAX_ROW * MAX_COLUMN - 1);
 		empty_cells		:	cell_array_position_type(0 to MAX_ROW * MAX_COLUMN - 1);
 	end record;
-	
 	type level_array_type is array(integer range 0 to MAX_LEVEL - 1) of level_type;
 	
 	--FUNCTIONS
@@ -60,23 +67,22 @@ package nonogram_package is
 	--board
 	function get_board_line(board : board_type; transposed : integer range 0 to 1; index : integer range 0 to MAX_LINE) return line_type;
 	function load_board(level : integer range 0 to MAX_LEVEl - 1) return board_type;
+	function get_undefined_cells(board : board_type) return integer;
 	
 	--clues
-	function get_clue_row_length(level : integer; index : integer range 0 to MAX_COLUMN) return integer;
-	function get_clue_column_length(level : integer; index : integer range 0 to MAX_ROW) return integer;
+	function get_clue_line_length(level : integer range 0 to MAX_LEVEL - 1; transposed : integer range 0 to 1; index : integer range 0 to MAX_LINE) return integer;
+	
+	--constraints
+	function load_constraints(level : integer range 0 to MAX_LEVEL - 1) return constraint_matrix_type;
 	
 	--CONSTANTS
 	constant EMPTY_LEVEL : level_type :=
 	(
-		rows 				=> 0,
-		columns			=> 0,
-		clue_rows		=> 
+		dim 				=> (0,0),
+		clues				=> 
 		(
-			others => (others => -1)
-		),
-		clue_columns	=> 
-		(
-			others => (others => -1)
+			(others => (others => -1)),
+			(others => (others => -1))
 		),
 		full_cells		=>
 		(
@@ -91,24 +97,24 @@ package nonogram_package is
 	constant LEVEL_INPUT : level_array_type :=
 	(
 		(
-			rows 				=> 4,
-			columns			=> 5,
-			clue_rows		=> 
+			dim 				=> (5,4),
+			clues				=> 
 			(
-				(5, others => -1),
-				(1,1, others => -1),
-				(1,1, others => -1),
-				(1,1, others => -1),
-				others => (others => -1)
-			),
-			clue_columns	=> 
-			(
-				(1, others => -1),
-				(4, others => -1),
-				(1, others => -1),
-				(4, others => -1),
-				(1, others => -1),
-				others => (others => -1)
+				(
+					(5, others => -1),
+					(1,1, others => -1),
+					(1,1, others => -1),
+					(1,1, others => -1),
+					others => (others => -1)
+				),
+				(
+					(1, others => -1),
+					(4, others => -1),
+					(1, others => -1),
+					(4, others => -1),
+					(1, others => -1),
+					others => (others => -1)
+				)
 			),
 			full_cells		=>
 			(
@@ -122,21 +128,21 @@ package nonogram_package is
 			)
 		),
 		(
-			rows 				=> 3,
-			columns			=> 3,
-			clue_rows		=> 
+			dim 				=> (3,3),
+			clues				=> 
 			(
-				(1,1, others => -1),
-				(1, others => -1),
-				(1,1, others => -1),
-				others => (others => -1)
-			),
-			clue_columns	=> 
-			(
-				(1,1, others => -1),
-				(1, others => -1),
-				(1,1, others => -1),
-				others => (others => -1)
+				(
+					(1,1, others => -1),
+					(1, others => -1),
+					(1,1, others => -1),
+					others => (others => -1)
+				),
+				(
+					(1,1, others => -1),
+					(1, others => -1),
+					(1,1, others => -1),
+					others => (others => -1)
+				)
 			),
 			full_cells		=>
 			(
@@ -150,34 +156,34 @@ package nonogram_package is
 			)
 		),
 		(
-			rows 				=> 10,
-			columns			=> 9,
-			clue_rows		=> 
+			dim 				=> (9,10),
+			clues				=> 
 			(
-				(1,1, others => -1),
-				(3,3, others => -1),
-				(1,1,1, others => -1),
-				(1,1, others => -1),
-				(1,1, others => -1),
-				(1,1, others => -1),
-				(1,1, others => -1),
-				(1,1, others => -1),
-				(3, others => -1),
-				(1, others => -1),
-				others => (others => -1)
-			),
-			clue_columns	=> 
-			(
-				(4, others => -1),
-				(1,1, others => -1),
-				(2,1, others => -1),
-				(1,1, others => -1),
-				(1,2, others => -1),
-				(1,1, others => -1),
-				(2,1, others => -1),
-				(1,1, others => -1),
-				(4, others => -1),
-				others => (others => -1)
+				(
+					(1,1, others => -1),
+					(3,3, others => -1),
+					(1,1,1, others => -1),
+					(1,1, others => -1),
+					(1,1, others => -1),
+					(1,1, others => -1),
+					(1,1, others => -1),
+					(1,1, others => -1),
+					(3, others => -1),
+					(1, others => -1),
+					others => (others => -1)
+				),
+				(
+					(4, others => -1),
+					(1,1, others => -1),
+					(2,1, others => -1),
+					(1,1, others => -1),
+					(1,2, others => -1),
+					(1,1, others => -1),
+					(2,1, others => -1),
+					(1,1, others => -1),
+					(4, others => -1),
+					others => (others => -1)
+				)
 			),
 			full_cells		=>
 			(
@@ -247,11 +253,11 @@ package body nonogram_package is
 	end function;
 	
 	function load_board(level : integer range 0 to MAX_LEVEl - 1) return board_type is
-	variable result : board_type := (others => (others => INVALID));
+		variable result : board_type := (others => (others => INVALID));
 	begin
 		for x in 0 to MAX_ROW - 1 loop
 			for y in 0 to MAX_COLUMN - 1 loop
-				if(x < LEVEL_INPUT(level).columns and y < LEVEL_INPUT(level).rows) then 
+				if(x < LEVEL_INPUT(level).dim(0) and y < LEVEL_INPUT(level).dim(1)) then 
 					result(x, y) := UNDEFINED;
 				end if;
 			end loop;
@@ -272,15 +278,28 @@ package body nonogram_package is
 		return result;
 	end function;
 	
+	function get_undefined_cells(board : board_type) return integer is
+		variable result : integer range 0 to MAX_ROW * MAX_COLUMN := 0;
+	begin
+		for x in 0 to MAX_ROW - 1 loop
+			for y in 0 to MAX_COLUMN - 1 loop
+				if(board(x, y) = UNDEFINED) then
+					result := result + 1;
+				end if;
+			end loop;
+		end loop;
+		return result;
+	end function;
+	
 	--clues
-	function get_clue_row_length(level : integer range 0 to MAX_LEVEL - 1; index : integer range 0 to MAX_COLUMN) return integer is
+	function get_clue_line_length(level : integer range 0 to MAX_LEVEL - 1; transposed : integer range 0 to 1; index : integer range 0 to MAX_LINE) return integer is
 		variable result : integer := 0;
 	begin
-		if(LEVEL_INPUT(level).rows <= index) then
+		if((LEVEL_INPUT(level).dim(1) <= index and transposed = 0) or (LEVEL_INPUT(level).dim(0) <= index and transposed = 1)) then
 			return -1;
 		else	
-			for i in 0 to MAX_CLUE_ROW loop
-			if(LEVEL_INPUT(level).clue_rows(index, i) > 0) then
+			for i in 0 to MAX_CLUE_LINE loop
+			if(LEVEL_INPUT(level).clues(transposed, index, i) > 0) then
 				result := result + 1;
 			else
 				return result;
@@ -289,20 +308,43 @@ package body nonogram_package is
 		end if;
 	end function;
 	
-	function get_clue_column_length(level : integer range 0 to MAX_LEVEL - 1; index : integer range 0 to MAX_ROW) return integer is
-		variable result : integer := 0;
+	--constraints
+	function load_constraints(level : integer range 0 to MAX_LEVEL - 1) return constraint_matrix_type is
+		variable result : constraint_matrix_type := (others => (others => (others => (-1,0,0))));
+		variable left_clues_sum : integer;
+		variable right_clues_sum : integer;
+		variable clue_line_length : integer;
 	begin
-		if(LEVEL_INPUT(level).columns <= index) then
-			return -1;
-		else	
-			for i in 0 to MAX_CLUE_COLUMN loop
-			if(LEVEL_INPUT(level).clue_columns(index, i) > 0) then
-				result := result + 1;
-			else
-				return result;
+		for t in 0 to 1 loop
+			for i in 0 to MAX_LINE - 1 loop
+			if(i < LEVEL_INPUT(level).dim(1 - t)) then
+				
+				clue_line_length := get_clue_line_length(level, t, i);
+				left_clues_sum := 0;
+				right_clues_sum := 0;
+				
+				for j in 0 to MAX_CLUE_LINE -1 loop
+				if(j < clue_line_length) then
+					right_clues_sum := right_clues_sum + LEVEL_INPUT(level).clues(t, i, j) + 1;
+				end if;
+				end loop;
+					
+				for j in 0 to MAX_CLUE_LINE -1 loop
+				if(j < clue_line_length) then
+					result(t, i, j).size := LEVEL_INPUT(level).clues(t, i, j);
+					
+					right_clues_sum := right_clues_sum - LEVEL_INPUT(level).clues(t, i, j) - 1;
+					
+					result(t, i, j).min_start := left_clues_sum;
+					result(t, i, j).max_end := LEVEL_INPUT(level).dim(t) - 1 - right_clues_sum;
+					
+					left_clues_sum := left_clues_sum + LEVEL_INPUT(level).clues(t, i , j) + 1;
+				end if;
+				end loop;	
 			end if;
+			end loop;
 		end loop;
-		end if;
+		return result;
 	end function;
 	
 end package body;

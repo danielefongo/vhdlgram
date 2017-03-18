@@ -47,7 +47,7 @@ architecture RTL of nonogram is
 	signal ack						: status_type;
 	signal row_index				: integer range 0 to MAX_COLUMN - 1;
 	signal row_description		: line_type;
-	signal iteration				: integer range 0 to MAX_ITERATION - 1;
+	signal iteration				: integer range 0 to MAX_ITERATION;
 	signal undefined_cells		: integer range 0 to MAX_ROW * MAX_COLUMN;
 	
 begin

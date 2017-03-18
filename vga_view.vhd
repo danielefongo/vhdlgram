@@ -88,8 +88,8 @@ begin
 			if(level < 0) then
 				send_color(BLACK);
 			else --valid level
-				rows := LEVEL_INPUT(LEVEL).rows;
-				columns := LEVEL_INPUT(LEVEL).columns;
+				rows := LEVEL_INPUT(level).dim(1);
+				columns := LEVEL_INPUT(level).dim(0);
 				
 				--inside the visible window
 				if(old_x >= WINDOW_HORIZONTAL_START and old_x < WINDOW_HORIZONTAL_END and old_y >= WINDOW_VERTICAL_START and old_y < WINDOW_VERTICAL_END) then
@@ -122,11 +122,11 @@ begin
 						else --not draw table
 						
 							--right side of the table			
-							if(x > 2 * PADDING + CELL_SIZE * columns and x <= 2 * PADDING + CELL_SIZE * columns + CELL_SIZE * get_clue_row_length(level, (y - PADDING) / CELL_SIZE) and y < PADDING + CELL_SIZE * rows) then
+							if(x > 2 * PADDING + CELL_SIZE * columns and x <= 2 * PADDING + CELL_SIZE * columns + CELL_SIZE * get_clue_line_length(level, 0, (y - PADDING) / CELL_SIZE) and y < PADDING + CELL_SIZE * rows) then
 								
 								clue_x := (x - 2 * PADDING - CELL_SIZE * columns) / CELL_SIZE;
 								clue_y := (y - PADDING) / CELL_SIZE;
-								clue := LEVEL_INPUT(level).clue_rows(clue_y, clue_x);
+								clue := LEVEL_INPUT(level).clues(0, clue_y, clue_x);
 								cell_x := (x - 2 * PADDING - CELL_SIZE * columns) mod CELL_SIZE;
 								cell_y := (y - PADDING) mod CELL_SIZE;
 								
@@ -137,11 +137,11 @@ begin
 								end if;
 								
 							--bottom side of the table
-							elsif(y > 2 * PADDING + CELL_SIZE * rows and y <= 2 * PADDING + CELL_SIZE * rows + CELL_SIZE * get_clue_column_length(level, (x - PADDING) / CELL_SIZE) and x < PADDING + CELL_SIZE * columns) then
+							elsif(y > 2 * PADDING + CELL_SIZE * rows and y <= 2 * PADDING + CELL_SIZE * rows + CELL_SIZE * get_clue_line_length(level, 1, (x - PADDING) / CELL_SIZE) and x < PADDING + CELL_SIZE * columns) then
 								
 								clue_x := (x - PADDING) / CELL_SIZE;
 								clue_y := (y - 2 * PADDING - CELL_SIZE * rows) / CELL_SIZE;
-								clue := LEVEL_INPUT(level).clue_columns(clue_x, clue_y);
+								clue := LEVEL_INPUT(level).clues(1, clue_x, clue_y);
 								cell_x := (x - PADDING) mod CELL_SIZE;
 								cell_y := (y - 2 * PADDING - CELL_SIZE * rows) mod CELL_SIZE;
 								

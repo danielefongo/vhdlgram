@@ -144,8 +144,8 @@ begin
 		VGA_CLK <= vga_clock;
 	end process;
 	
-	--debugging
-	led_debugging : process(clock, reset_n)
+	--debugging TODO: remove this
+	led_status_debug : process(clock, reset_n)
 	begin
 		if(reset_n = '0') then
 			LEDG <= "000000000";
@@ -163,6 +163,30 @@ begin
 					LEDG <= "000001000";
 				when LOST =>
 					LEDG <= "000000100";
+			end case;
+		end if;
+	end process;
+	led_level_debug : process(clock, reset_n)
+	begin
+		if(reset_n = '0') then
+			LEDR <= (others => '0');
+		elsif(rising_edge(clock)) then
+			case(level) is
+				when -1 =>
+					LEDR(0) <= '1';
+					LEDR(17 downto 1) <= (others => '0');
+				when 0 =>
+					LEDR(17) <= '1';
+					LEDR(16 downto 0) <= (others => '0');
+				when 1 =>
+					LEDR(17 downto 16) <= "01";
+					LEDR(15 downto 0) <= (others => '0');
+				when 2 =>
+					LEDR(17 downto 15) <= "001";
+					LEDR(14 downto 0) <= (others => '0');
+				when 3 =>
+					LEDR(17 downto 14) <= "0001";
+					LEDR(13 downto 0) <= (others => '0');
 			end case;
 		end if;
 	end process;

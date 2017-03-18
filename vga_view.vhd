@@ -25,6 +25,10 @@ entity vga_view is
 		STATUS				:	in status_type
 	);
 	
+end;
+
+architecture RTL of vga_view is
+
 	--procedures
 	procedure send_color ( color : color_type ) is
 	begin
@@ -32,10 +36,6 @@ entity vga_view is
 		VGA_G <= color(8 to 15);
 		VGA_B <= color(16 to 23);
 	end send_color;
-	
-end;
-
-architecture RTL of vga_view is
 
 begin
 		

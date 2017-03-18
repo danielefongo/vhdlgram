@@ -59,7 +59,8 @@ begin
 			board <= (others => (others => INVALID));
 			solver_status_register <= S_IDLE;
 			ack_register <= IDLE;
-			ACK <= IDLE;
+			undefined_cells_register <= 0;
+			iteration_register <= 0;
 		elsif(rising_edge(CLOCK)) then
 			case(STATUS) is
 				when IDLE =>
@@ -114,11 +115,11 @@ begin
 				when WON | LOST =>
 					ack_register <= ack_register;
 			end case;
-			
-			UNDEFINED_CELLS <= undefined_cells_register;
-			ITERATION <= iteration_register;
-			ACK <= ack_register;
+
 		end if;
+		UNDEFINED_CELLS <= undefined_cells_register;
+		ITERATION <= iteration_register;
+		ACK <= ack_register;
 	end process;
 
 end architecture;

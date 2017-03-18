@@ -81,6 +81,23 @@ begin
 			STATUS					=> status
 		);
 		
+	hex_view : entity work.hex_view
+		port map
+		(
+			CLOCK						=> vga_clock,			
+			RESET_N					=> reset_n,
+			
+			ITERATION				=> iteration,
+			UNDEFINED_CELLS		=> undefined_cells,
+
+			HEX7						=> HEX7,
+			HEX6						=> HEX6,
+			HEX3						=> HEX3,
+			HEX2						=> HEX2,
+			HEX1						=> HEX1,
+			HEX0						=> HEX0
+		);
+		
 	controller : entity work.controller
 		port map
 		(

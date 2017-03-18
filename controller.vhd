@@ -90,7 +90,7 @@ begin
 	level_select : process(CLOCK, RESET_N)
 	begin
 		if(RESET_N = '0') then
-			level_update_register <= '0';
+			level_update_register <= '1';
 			level_register <= -1;
 			level_update_status <= L_IDLE;
 			LEVEL <= level_register;
@@ -148,6 +148,8 @@ begin
 							status_register <= SOLVE_ALL;
 						elsif(solve_iteration_register = '1') then
 							status_register <= SOLVE_ITERATION;
+						else
+							status_register <= IDLE;
 						end if;
 					when LOAD =>
 						if(ACK = LOAD) then

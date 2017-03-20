@@ -91,7 +91,7 @@ begin
 	begin
 		if(RESET_N = '0') then
 			status_register <= IDLE;
-			STATUS <= status_register;
+			STATUS <= IDLE;
 		elsif(rising_edge(CLOCK)) then
 			/*if(level_update_register = '1') then
 				status_register <= LOAD;*/

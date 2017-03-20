@@ -50,6 +50,7 @@ package nonogram_package is
 		min_start		: integer range 0 to MAX_LINE - 1;
 		max_end			: integer range 0 to MAX_LINE - 1;
 	end record;
+	type constraint_line_type is array(integer range 0 to MAX_CLUE_LINE - 1) of constraint_type;
 	type constraint_matrix_type is array(integer range 0 to 1, integer range 0 to MAX_LINE - 1, integer range 0 to MAX_CLUE_LINE) of constraint_type;
 	
 	--field
@@ -83,6 +84,7 @@ package nonogram_package is
 	
 	--constraints
 	function load_constraints(level : integer range 0 to MAX_LEVEL - 1) return constraint_matrix_type;
+	function check_constraints(level : integer range 0 to MAX_LEVEL - 1; constraints : constraint_matrix_type) return boolean;
 	
 	--CONSTANTS
 	constant EMPTY_LEVEL : level_type :=
@@ -127,12 +129,10 @@ package nonogram_package is
 			),
 			full_cells		=>
 			(
-				(0,3),
 				others => (-1, -1)
 			),
 			empty_cells		=>
 			(
-				(2,1),
 				others => (-1, -1)
 			)
 		),
@@ -196,32 +196,6 @@ package nonogram_package is
 			),
 			full_cells		=>
 			(
-				(0,2),
-				(0,3),
-				(0,4),
-				(0,5),
-				(1,1),
-				(1,6),
-				(2,0),
-				(2,1),
-				(2,7),
-				(3,1),
-				(3,8),
-				(4,2),
-				(4,8),
-				(4,9),
-				(5,1),
-				(5,8),
-				(6,0),
-				(6,1),
-				(6,7),
-				(7,1),
-				(7,6),
-				(8,2),
-				(8,3),
-				(8,4),
-				(8,5),
-				(0,3),
 				others => (-1, -1)
 			),
 			empty_cells		=>
@@ -240,22 +214,12 @@ package body nonogram_package is
 	--board
 	function get_board_line(board : board_type; transposed : integer range 0 to 1; index : integer range 0 to MAX_LINE) return line_type is
 		variable result : line_type := (others => INVALID);
-		variable max_i : integer := 0;
 	begin
-		if(transposed = 0) then
-			max_i := MAX_ROW - 1;
-		else
-			max_i := MAX_COLUMN - 1;
-		end if;
-		
-		for i in 0 to max_i loop
-			if(transposed = 0) then
+		for i in 0 to MAX_LINE - 1 loop
+			if(transposed = 0 and i < MAX_ROW) then
 				result(i) := board(i, index);
-			else
+			elsif(transposed = 1 and i < MAX_COLUMN) then
 				result(i) := board(index, i);
-			end if;
-			if(result(i) = INVALID) then
-				return result;
 			end if;
 		end loop;
 		return result;
@@ -290,6 +254,7 @@ package body nonogram_package is
 	end function;
 	
 	function check_board(level : integer range -1 to MAX_LEVEl - 1; board : board_type) return boolean is
+		variable result : boolean := true;
 	begin
 		if(level < 0) then
 			return false;
@@ -298,30 +263,38 @@ package body nonogram_package is
 				for y in 0 to MAX_COLUMN - 1 loop
 					if(x < LEVEL_INPUT(level).dim(0) and y < LEVEL_INPUT(level).dim(1)) then 
 						if(board(x,y) = INVALID) then
-							return false;
+							result := false;
 						end if;
 					end if;
 				end loop;
 			end loop;
 			
+			if(result = false) then
+				return result;
+			end if;
+			
 			for i in 0 to MAX_ROW * MAX_COLUMN - 1 loop
 				if(LEVEL_INPUT(level).empty_cells(i).x /= -1 and LEVEL_INPUT(level).empty_cells(i).y /= -1) then
 					if(board(LEVEL_INPUT(level).empty_cells(i).x, LEVEL_INPUT(level).empty_cells(i).y) /= EMPTY) then
-						return false;
+						result := false;
 					end if;
 				end if;
 			end loop;
 			
+			if(result = false) then
+				return result;
+			end if;
+			
 			for i in 0 to MAX_ROW * MAX_COLUMN - 1 loop
 				if(LEVEL_INPUT(level).full_cells(i).x /= -1 and LEVEL_INPUT(level).full_cells(i).y /= -1) then
 					if(board(LEVEL_INPUT(level).full_cells(i).x, LEVEL_INPUT(level).full_cells(i).y) /= FULL) then
-						return false;
+						result := false;
 					end if;
 				end if;
 			end loop;
 		end if;
-		
-		return true;
+	
+		return result;
 	end function;
 	
 	function get_undefined_cells(board : board_type) return integer is
@@ -345,12 +318,12 @@ package body nonogram_package is
 			return -1;
 		else	
 			for i in 0 to MAX_CLUE_LINE loop
-			if(LEVEL_INPUT(level).clues(transposed, index, i) > 0) then
-				result := result + 1;
-			else
-				return result;
-			end if;
-		end loop;
+				if(LEVEL_INPUT(level).clues(transposed, index, i) > 0) then
+					result := result + 1;
+				else
+					return result;
+				end if;
+			end loop;
 		end if;
 	end function;
 	
@@ -393,4 +366,24 @@ package body nonogram_package is
 		return result;
 	end function;
 	
+	function check_constraints(level : integer range 0 to MAX_LEVEL - 1; constraints : constraint_matrix_type) return boolean is
+		variable clue_line_length : integer;
+		variable result : boolean := true;
+	begin
+		for t in 0 to 1 loop
+			for i in 0 to MAX_LINE - 1 loop
+			if(i < LEVEL_INPUT(level).dim(1 - t)) then
+				clue_line_length := get_clue_line_length(level, t, i);
+				for j in 0 to MAX_CLUE_LINE -1 loop
+				if(j < clue_line_length) then
+					if(constraints(t, i, j).size /= LEVEL_INPUT(level).clues(t, i, j)) then
+						result := false;
+					end if;
+				end if;
+				end loop;	
+			end if;
+			end loop;
+		end loop;
+		return result;
+	end function;
 end package body;

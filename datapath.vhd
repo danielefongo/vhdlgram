@@ -42,6 +42,7 @@ architecture RTL of datapath is
 	signal board								: board_type;
 	signal constraints 						: constraint_matrix_type;
 	signal transposed							: integer := 0;
+	signal line_register						: integer := 0;
 	
 	function set_board_line(index : integer range 0 to MAX_LINE; input_line : line_type) return boolean is
 	begin
@@ -54,6 +55,104 @@ architecture RTL of datapath is
 		end loop;
 		return true;
 	end function;
+	
+	--procedures
+	procedure analyze(index : integer range 0 to MAX_LINE - 1) is
+		variable split_fields : field_array_type;
+		variable univocal : boolean := true;
+		variable current_constraint : integer := 0;
+		variable current_field : integer := 0;
+		variable available_size : integer := 0;
+	begin
+		if(LEVEL_INPUT(LEVEL).dim(1 - transposed) > index) then
+			split_fields := split_by_spaces(get_board_line(board, transposed, index));
+			
+			--analyze from left
+			available_size := split_fields(current_field).size;
+			for i in 0 to 2 * MAX_CLUE_LINE loop
+			if(univocal = true and current_constraint < MAX_CLUE_LINE and current_field < MAX_CLUE_LINE and constraints(transposed, index, current_constraint).size /= -1 and split_fields(current_field).size /= -1) then
+				if(available_size /= -1 and available_size < constraints(transposed, index, current_constraint).size) then
+					if(available_size = split_fields(current_field).size) then
+						--set_field(transposed, index, split_fields(current_field), EMPTY);
+					end if;
+					current_field := current_field + 1;
+					if(current_field < MAX_CLUE_LINE and split_fields(current_field).size /= -1) then
+						available_size := split_fields(current_field).size;
+					end if;
+				elsif(available_size /= -1 and split_fields(current_field).size /= -1) then
+					if(constraints(transposed, index, current_constraint).min_start < split_fields(current_field).f_end + 1 - available_size) then
+						constraints(transposed, index, current_constraint).min_start <= split_fields(current_field).f_end + 1 - available_size;
+					end if;
+					if(current_field = MAX_CLUE_LINE - 1 or split_fields(current_field + 1).size = -1) then
+						univocal := true;
+					elsif(constraint_fit_problem(field_line_slice(split_fields, current_field + 1, MAX_CLUE_LINE - 1), constraint_line_slice(constraints, transposed, index, current_constraint, MAX_CLUE_LINE - 1)) = false) then
+						univocal := true;
+					else
+						univocal := false;
+					end if;
+					--univocal = (current_split_field == split_fields.length - 1) || !this._clues_fit_problem(split_fields.slice(current_split_field + 1), this.clues[this.transposed][index].slice(current_clue));
+               
+					if(univocal = true) then
+						available_size := available_size - constraints(transposed, index, current_constraint).size - 1;
+						if (constraints(transposed, index, current_constraint).max_end > split_fields(current_field).f_end) then
+							constraints(transposed, index, current_constraint).max_end <= split_fields(current_field).f_end;
+						end if;
+						
+						current_constraint := current_constraint + 1;
+					end if;
+				end if;
+			end if;
+			end loop;
+			
+			/*
+			--analyze from right
+			
+			current_constraint := MAX_CLUE_LINE - 1;
+			current_field := MAX_CLUE_LINE - 1;
+			available_size := split_fields(current_field).size;
+			for i in 0 to 2 * MAX_CLUE_LINE loop
+			if(available_size /= -1) then
+				current_field := current_field - 1;
+				available_size := split_fields(current_field).size;
+			elsif(constraints(transposed, index, current_constraint).size = -1) then
+				current_constraint := current_constraint - 1;
+			else
+				if(univocal = true and current_constraint >= 0 and current_field >= 0) then
+					if(available_size /= -1 and available_size < constraints(transposed, index, current_constraint).size) then
+						if(available_size = split_fields(current_field).size) then
+							--set_field(transposed, index, split_fields(current_field), EMPTY);
+						end if;
+						current_field := current_field - 1;
+						if(current_field >= 0) then
+							available_size := split_fields(current_field).size;
+						end if;
+					elsif(available_size /= -1 and split_fields(current_field).size /= -1) then
+						if(constraints(transposed, index, current_constraint).max_end > split_fields(current_field).f_start - 1 + available_size) then
+							constraints(transposed, index, current_constraint).max_end <= split_fields(current_field).f_start - 1 + available_size;
+						end if;
+						if(current_field = 0) then
+							univocal := true;
+						elsif(constraint_fit_problem(field_line_slice(split_fields, 0, current_field - 1), constraint_line_slice(constraints, transposed, index, 0, current_constraint)) = false) then
+							univocal := true;
+						else
+							univocal := false;
+						end if;
+						
+						if(univocal = true) then
+							available_size := available_size - constraints(transposed, index, current_constraint).size - 1;
+							if (constraints(transposed, index, current_constraint).min_start < split_fields(current_field).f_start) then
+								constraints(transposed, index, current_constraint).min_start <= split_fields(current_field).f_start;
+							end if;
+							
+							current_constraint := current_constraint - 1;
+						end if;
+					end if;
+				end if;
+			end if;
+			end loop;
+			*/
+		end if;
+	end analyze;
 	
 	procedure simple_blocks(index : integer range 0 to MAX_LINE - 1) is
 		variable tmp_line : line_type;
@@ -105,7 +204,6 @@ architecture RTL of datapath is
 		end if;
 	end simple_spaces;
 
-	--procedures
 	procedure load_procedure is
 	begin
 		case(loader_status_register) is
@@ -133,24 +231,27 @@ architecture RTL of datapath is
 	begin
 		case(solver_status_register) is
 			when S_IDLE =>
+				line_register <= 0;
 				solver_status_register <= S_ANALYZING;
 			when S_ANALYZING =>
+				analyze(line_register);
 				solver_status_register <= S_SIMPLE_BLOCKS;
 			when S_SIMPLE_BLOCKS =>
-				for i in 0 to MAX_LINE - 1 loop
-					simple_blocks(i);
-				end loop;
+				simple_blocks(line_register);
 				solver_status_register <= S_SIMPLE_SPACES;
 			when S_SIMPLE_SPACES =>
-				for i in 0 to MAX_LINE - 1 loop
-					simple_spaces(i);
-				end loop;
+				simple_spaces(line_register);
 				solver_status_register <= S_FINALIZING;
 			when S_FINALIZING =>
-				iteration_register <= iteration_register + 1;
-				transposed <= 1 - transposed;
-				undefined_cells_register <= get_undefined_cells(board);
-				solver_status_register <= S_CHECKING;
+				if(line_register < MAX_LINE - 1) then
+					line_register <= line_register + 1;
+					solver_status_register <= S_ANALYZING;
+				else
+					iteration_register <= iteration_register + 1;
+					transposed <= 1 - transposed;
+					undefined_cells_register <= get_undefined_cells(board);
+					solver_status_register <= S_CHECKING;
+				end if;
 			when S_CHECKING =>
 				if(undefined_cells_register = 0) then
 					ack_register <= WON;

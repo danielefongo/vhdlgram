@@ -33,6 +33,7 @@ architecture RTL of datapath is
 	
 	type loader_status_type is (L_IDLE, L_LOADING, L_ACK);
 	signal loader_status_register			: loader_status_type := L_IDLE;
+	signal loader_ack							: std_logic_vector(MAX_LINE - 1 downto 0);
 	
 	signal ack_register						: status_type := IDLE;
 	
@@ -58,99 +59,91 @@ architecture RTL of datapath is
 	
 	--procedures
 	procedure analyze(index : integer range 0 to MAX_LINE - 1) is
-		variable split_fields : field_array_type;
-		variable univocal : boolean := true;
-		variable current_constraint : integer := 0;
-		variable current_field : integer := 0;
+		variable tmp_line : line_type;
 		variable available_size : integer := 0;
+		variable clue_sum : integer := 0;
+		variable current_clue : integer := 0;
+		variable field_start : integer := -1;
+		variable field_end : integer := -1;
+		variable exit_analysis : boolean := false;
+		variable exit_clues : boolean := false;
+		variable block_found : boolean := false;
 	begin
 		if(LEVEL_INPUT(LEVEL).dim(1 - transposed) > index) then
-			split_fields := split_by_spaces(get_board_line(board, transposed, index));
+			tmp_line := get_board_line(board, transposed, index);
 			
-			--analyze from left
-			available_size := split_fields(current_field).size;
-			for i in 0 to 2 * MAX_CLUE_LINE loop
-			if(univocal = true and current_constraint < MAX_CLUE_LINE and current_field < MAX_CLUE_LINE and constraints(transposed, index, current_constraint).size /= -1 and split_fields(current_field).size /= -1) then
-				if(available_size /= -1 and available_size < constraints(transposed, index, current_constraint).size) then
-					if(available_size = split_fields(current_field).size) then
-						--set_field(transposed, index, split_fields(current_field), EMPTY);
-					end if;
-					current_field := current_field + 1;
-					if(current_field < MAX_CLUE_LINE and split_fields(current_field).size /= -1) then
-						available_size := split_fields(current_field).size;
-					end if;
-				elsif(available_size /= -1 and split_fields(current_field).size /= -1) then
-					if(constraints(transposed, index, current_constraint).min_start < split_fields(current_field).f_end + 1 - available_size) then
-						constraints(transposed, index, current_constraint).min_start <= split_fields(current_field).f_end + 1 - available_size;
-					end if;
-					if(current_field = MAX_CLUE_LINE - 1 or split_fields(current_field + 1).size = -1) then
-						univocal := true;
-					elsif(constraint_fit_problem(field_line_slice(split_fields, current_field + 1, MAX_CLUE_LINE - 1), constraint_line_slice(constraints, transposed, index, current_constraint, MAX_CLUE_LINE - 1)) = false) then
-						univocal := true;
-					else
-						univocal := false;
-					end if;
-					--univocal = (current_split_field == split_fields.length - 1) || !this._clues_fit_problem(split_fields.slice(current_split_field + 1), this.clues[this.transposed][index].slice(current_clue));
-               
-					if(univocal = true) then
-						available_size := available_size - constraints(transposed, index, current_constraint).size - 1;
-						if (constraints(transposed, index, current_constraint).max_end > split_fields(current_field).f_end) then
-							constraints(transposed, index, current_constraint).max_end <= split_fields(current_field).f_end;
-						end if;
-						
-						current_constraint := current_constraint + 1;
-					end if;
-				end if;
+			for i in 0 to MAX_LINE - 1 loop
+			if(tmp_line(i) = FULL or tmp_line(i) = UNDEFINED) then
+				available_size := available_size + 1;
 			end if;
 			end loop;
 			
-			/*
-			--analyze from right
+			for i in 0 to MAX_CLUE_LINE - 1 loop
+			if(constraints(transposed, index, i).size /= -1) then
+				clue_sum := clue_sum + constraints(transposed, index, i).size;
+			end if;
+			end loop;
 			
-			current_constraint := MAX_CLUE_LINE - 1;
-			current_field := MAX_CLUE_LINE - 1;
-			available_size := split_fields(current_field).size;
-			for i in 0 to 2 * MAX_CLUE_LINE loop
-			if(available_size /= -1) then
-				current_field := current_field - 1;
-				available_size := split_fields(current_field).size;
-			elsif(constraints(transposed, index, current_constraint).size = -1) then
-				current_constraint := current_constraint - 1;
-			else
-				if(univocal = true and current_constraint >= 0 and current_field >= 0) then
-					if(available_size /= -1 and available_size < constraints(transposed, index, current_constraint).size) then
-						if(available_size = split_fields(current_field).size) then
-							--set_field(transposed, index, split_fields(current_field), EMPTY);
+			for i in 0 to MAX_LINE - 1 loop
+			if(tmp_line(i) /= INVALID and exit_analysis = false) then
+				case(tmp_line(i)) is
+					when FULL =>
+						block_found := true;
+						if(field_start = -1) then
+							field_start := i;
 						end if;
-						current_field := current_field - 1;
-						if(current_field >= 0) then
-							available_size := split_fields(current_field).size;
+						field_end := i;
+					when UNDEFINED =>
+						if(field_start = -1) then
+							field_start := i;
 						end if;
-					elsif(available_size /= -1 and split_fields(current_field).size /= -1) then
-						if(constraints(transposed, index, current_constraint).max_end > split_fields(current_field).f_start - 1 + available_size) then
-							constraints(transposed, index, current_constraint).max_end <= split_fields(current_field).f_start - 1 + available_size;
-						end if;
-						if(current_field = 0) then
-							univocal := true;
-						elsif(constraint_fit_problem(field_line_slice(split_fields, 0, current_field - 1), constraint_line_slice(constraints, transposed, index, 0, current_constraint)) = false) then
-							univocal := true;
-						else
-							univocal := false;
-						end if;
-						
-						if(univocal = true) then
-							available_size := available_size - constraints(transposed, index, current_constraint).size - 1;
-							if (constraints(transposed, index, current_constraint).min_start < split_fields(current_field).f_start) then
-								constraints(transposed, index, current_constraint).min_start <= split_fields(current_field).f_start;
+						field_end := i;
+					when EMPTY =>
+						exit_clues := false;
+						if(field_start /= -1 and field_end /= -1) then
+							for j in 0 to MAX_CLUE_LINE - 1 loop
+							if(j >= current_clue and constraints(transposed, index, j).size /= -1 and exit_analysis = false and exit_clues = false) then
+								if(field_end - field_start + 1 >= constraints(transposed, index, current_clue).size) then
+									if(constraints(transposed, index, current_clue).min_start < field_start) then
+										constraints(transposed, index, current_clue).min_start <= field_start;
+									end if;
+									
+									if(block_found = false and available_size - (field_end - field_start + 1) >= clue_sum) then
+										exit_analysis := true;
+									else --univocal
+										if(constraints(transposed, index, current_clue).max_end > field_end) then
+											constraints(transposed, index, current_clue).max_end <= field_end;
+										end if;
+										
+										if(field_end - field_start + 1 = constraints(transposed, index, current_clue).size) then
+											available_size := available_size - constraints(transposed, index, current_clue).size;
+										else
+											available_size := available_size - constraints(transposed, index, current_clue).size - 1;
+										end if;
+										
+										field_start := field_start + constraints(transposed, index, current_clue).size + 1;
+										clue_sum := clue_sum - constraints(transposed, index, current_clue).size;
+										current_clue := current_clue + 1;
+										block_found := false;
+										
+										if(field_end - field_start < 0) then
+											exit_clues := true;
+										end if;
+									end if;
+								else
+									exit_clues := true;
+									available_size := available_size - (field_end - field_start + 1);
+								end if;
 							end if;
-							
-							current_constraint := current_constraint - 1;
+							end loop;
 						end if;
-					end if;
-				end if;
+						field_start := -1;
+						field_end := -1;
+						block_found := false;
+					when others =>
+				end case;
 			end if;
 			end loop;
-			*/
 		end if;
 	end analyze;
 	
@@ -213,7 +206,7 @@ architecture RTL of datapath is
 				constraints <= load_constraints(LEVEL);
 				loader_status_register <= L_LOADING;
 			when L_LOADING =>
-				if(check_board(LEVEL, board) and check_constraints(LEVEL, constraints)) then
+				if(check_board(LEVEL, board) and check_constraints(LEVEL, constraints)) then --and loader_ack = (loader_ack'range => '1')) then 
 					loader_status_register <= L_ACK;
 				else
 					board <= load_board(LEVEL);
@@ -271,8 +264,70 @@ architecture RTL of datapath is
 	end solve_procedure;
 	
 begin
-
+	/*
 	--processes
+	analyzers : for i in 0 to MAX_LINE - 1 generate
+		analyzer : process(CLOCK, RESET_N)
+			variable loader_ack_register : std_logic := '0';
+			variable clue_line_length : integer := 0;
+			variable left_clues_sum : integer;
+			variable right_clues_sum : integer;
+		begin
+			if(RESET_N = '0') then
+				loader_ack(i) <= '0';
+				loader_ack_register := '0';
+			elsif(rising_edge(CLOCK)) then
+				if(loader_status_register = L_LOADING) then
+					for t in 0 to 1 loop
+						if(i < LEVEL_INPUT(LEVEL).dim(1 - t)) then
+							
+							clue_line_length := get_clue_line_length(level, t, i);
+							left_clues_sum := 0;
+							right_clues_sum := 0;
+							
+							for j in 0 to MAX_CLUE_LINE -1 loop
+							if(j < clue_line_length) then
+								right_clues_sum := right_clues_sum + LEVEL_INPUT(level).clues(t, i, j) + 1;
+							end if;
+							end loop;
+								
+							for j in 0 to MAX_CLUE_LINE -1 loop
+							if(j < clue_line_length) then
+								constraints(t, i, j).size <= LEVEL_INPUT(level).clues(t, i, j);
+								
+								right_clues_sum := right_clues_sum - LEVEL_INPUT(level).clues(t, i, j) - 1;
+								
+								constraints(t, i, j).min_start <= left_clues_sum;
+								constraints(t, i, j).max_end <= LEVEL_INPUT(level).dim(t) - 1 - right_clues_sum;
+								
+								left_clues_sum := left_clues_sum + LEVEL_INPUT(level).clues(t, i , j) + 1;
+							end if;
+							end loop;
+							
+							--check
+							loader_ack_register := '1';
+							for j in 0 to MAX_CLUE_LINE -1 loop
+							if(j < clue_line_length) then
+								if (constraints(t, i, j).size /= LEVEL_INPUT(level).clues(t, i, j)) then
+									loader_ack_register := '0';
+								end if;
+							end if;
+							end loop;
+							loader_ack(i) <= loader_ack_register;
+						else
+							loader_ack(i) <= '1';
+						end if;
+					end loop;
+				else
+					loader_ack(i) <= '0';
+					if(solver_status_register = S_ANALYZING) then
+						--analyze(i);
+					end if;
+				end if;
+			end if;
+		end process;
+	end generate;
+	*/
 	row_description_update : process(CLOCK, RESET_N)
 	begin
 		if(RESET_N = '0') then

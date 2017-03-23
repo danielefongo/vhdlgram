@@ -6,17 +6,17 @@ use ieee.std_logic_1164.all;
 package nonogram_package is
 
 	--CONSTANTS
-	constant MAX_ROW					: integer := 25;
-	constant MAX_COLUMN				: integer := 25;
-	constant MAX_LINE					: integer := 25; -- MAX(MAX_ROW, MAX_COLUMN)
+	constant MAX_ROW					: integer := 10;
+	constant MAX_COLUMN				: integer := 10;
+	constant MAX_LINE					: integer := 10; -- MAX(MAX_ROW, MAX_COLUMN)
 	
-	constant MAX_CLUE_ROW			: integer := 13; -- CEIL(MAX_ROW / 2)
-	constant MAX_CLUE_COLUMN		: integer := 13; -- CEIL(MAX_COLUMN / 2)
-	constant MAX_CLUE_LINE			: integer := 13; -- CEIL(MAX_LINE / 2)
+	constant MAX_CLUE_ROW			: integer := 5; -- CEIL(MAX_ROW / 2)
+	constant MAX_CLUE_COLUMN		: integer := 5; -- CEIL(MAX_COLUMN / 2)
+	constant MAX_CLUE_LINE			: integer := 5; -- CEIL(MAX_LINE / 2)
 	
 	constant MAX_CLUE					: integer := 19;
 	constant MAX_LEVEL				: integer := 4;
-	constant MAX_ITERATION			: integer := 100;
+	constant MAX_ITERATION			: integer := 30;
 	
 	--TYPES
 	attribute enum_encoding	: string;
@@ -53,14 +53,6 @@ package nonogram_package is
 	type constraint_line_type is array(integer range 0 to MAX_CLUE_LINE - 1) of constraint_type;
 	type constraint_matrix_type is array(integer range 0 to 1, integer range 0 to MAX_LINE - 1, integer range 0 to MAX_CLUE_LINE) of constraint_type;
 	
-	--field
-	type field_type is record
-		size				: integer range -1 to MAX_LINE;
-		f_start			: integer range 0 to MAX_LINE - 1;
-		f_end				: integer range 0 to MAX_LINE - 1;
-	end record;
-	type field_array_type is array(integer range 0 to MAX_CLUE_LINE - 1) of field_type; --TODO: check MAX_CLUE_LINE
-	
 	--levels
 	type dim_type is array(integer range <>) of integer range 0 to MAX_LINE - 1;
 	type level_type is record
@@ -72,7 +64,6 @@ package nonogram_package is
 	type level_array_type is array(integer range 0 to MAX_LEVEL - 1) of level_type;
 	
 	--FUNCTIONS
-	
 	--board
 	function get_board_line(board : board_type; transposed : integer range 0 to 1; index : integer range 0 to MAX_LINE) return line_type;
 	function load_board(level : integer range -1 to MAX_LEVEl - 1) return board_type;
@@ -86,12 +77,6 @@ package nonogram_package is
 	--function get_constraint_line(constraints : constraint_matrix_type; transposed : integer range 0 to 1; index : integer range 0 to MAX_LINE) return constraint_line_type;
 	function load_constraints(level : integer range 0 to MAX_LEVEL - 1) return constraint_matrix_type;
 	function check_constraints(level : integer range 0 to MAX_LEVEL - 1; constraints : constraint_matrix_type) return boolean;
-	function constraint_fit_problem(fields : field_array_type; constraints : constraint_line_type) return boolean;
-	function constraint_line_slice(constraints : constraint_matrix_type; transposed : integer range 0 to 1; index : integer range 0 to MAX_LINE - 1; l_start : integer range 0 to MAX_CLUE_LINE - 1; l_end : integer range 0 to MAX_CLUE_LINE - 1) return constraint_line_type;
-	
-	--fields
-	function split_by_spaces(input_line : line_type) return field_array_type;
-	function field_line_slice(input_line : field_array_type; l_start : integer range 0 to MAX_CLUE_LINE - 1; l_end : integer range 0 to MAX_CLUE_LINE - 1) return field_array_type;
 	
 	--CONSTANTS
 	constant EMPTY_LEVEL : level_type :=
@@ -335,7 +320,6 @@ package body nonogram_package is
 	end function;
 	
 	--constraints
- 
 	function load_constraints(level : integer range 0 to MAX_LEVEL - 1) return constraint_matrix_type is
 		variable result : constraint_matrix_type := (others => (others => (others => (-1,0,0))));
 		variable left_clues_sum : integer;
@@ -394,88 +378,5 @@ package body nonogram_package is
 		end loop;
 		return result;
 	end function;
-	
-	function constraint_fit_problem(fields : field_array_type; constraints : constraint_line_type) return boolean is
-		variable result : boolean := true;
-		variable current_constraint : integer := 0;
-		variable current_field : integer := 0;
-		variable available_length : integer;
-	begin
-		available_length := fields(current_field).size;
-		for i in 0 to 2 * MAX_CLUE_LINE loop
-			if(current_constraint < MAX_CLUE_LINE and current_field < MAX_CLUE_LINE and fields(current_field).size /= -1 and constraints(current_constraint).size /= -1) then
-				if(constraints(current_constraint).size <= available_length) then
-					available_length := available_length - constraints(current_constraint).size - 1;
-					current_constraint := current_constraint + 1;
-				else
-					current_field := current_field + 1;
-					if(current_field < MAX_CLUE_LINE and fields(current_field).size /= -1) then
-						available_length := fields(current_field).size;
-					end if;
-				end if;
-			end if;
-		end loop;
-		if(current_constraint < MAX_CLUE_LINE and constraints(current_constraint).size /= -1) then
-			return false;
-		else
-			return true;
-		end if;
-	end function;
-	
-	function constraint_line_slice(constraints : constraint_matrix_type; transposed : integer range 0 to 1; index : integer range 0 to MAX_LINE - 1; l_start : integer range 0 to MAX_CLUE_LINE - 1; l_end : integer range 0 to MAX_CLUE_LINE - 1) return constraint_line_type is
-		variable result : constraint_line_type := (others => (-1, 0, 0));
-		variable cursor : integer range 0 to MAX_CLUE_LINE := 0;
-	begin
-		for i in 0 to MAX_CLUE_LINE - 1 loop
-			if(i >= l_start and i <= l_end) then
-				result(cursor) := constraints(transposed, index, i);
-				cursor := cursor + 1;
-			end if;
-		end loop;
-		return result;
-	end function;
-	
-	--fields
-	function split_by_spaces(input_line : line_type) return field_array_type is
-		variable result : field_array_type := (others => (-1, 0, 0));
-		variable f_start : integer := -1;
-		variable f_end : integer := -1;
-		variable cursor : integer := 0;
-	begin
-		for i in 0 to MAX_LINE - 1 loop
-			case(input_line(i)) is
-				when FULL | UNDEFINED => 
-					if(f_start = -1) then
-						f_start := i;
-					end if;
-					f_end := i;
-				when EMPTY =>
-					if(f_start /= -1 and f_end /= -1) then
-						result(cursor).size := f_end - f_start + 1;
-						result(cursor).f_start := f_start;
-						result(cursor).f_end := f_end;
-						f_start := -1;
-						f_end := -1;
-						cursor := cursor + 1;
-					end if;
-				when INVALID =>
-				
-			end case;
-		end loop;
-		return result;
-	end function;
-	
-	function field_line_slice(input_line : field_array_type; l_start : integer range 0 to MAX_CLUE_LINE - 1; l_end : integer range 0 to MAX_CLUE_LINE - 1) return field_array_type is
-		variable result : field_array_type := (others => (-1, 0, 0));
-		variable cursor : integer range 0 to MAX_CLUE_LINE := 0;
-	begin
-		for i in 0 to MAX_CLUE_LINE - 1 loop
-			if(i >= l_start and i <= l_end) then
-				result(cursor) := input_line(i);
-				cursor := cursor + 1;
-			end if;
-		end loop;
-		return result;
-	end function;
-	
+		
 end package body;

@@ -38,17 +38,28 @@ end nonogram;
 architecture RTL of nonogram is
 
 	-- Signal declaration
-	signal clock					: std_logic;
-	signal vga_clock				: std_logic;
-	signal reset_n					: std_logic;
-	signal reset_sync				: std_logic;
-	signal level					: integer range -1 to MAX_LEVEL - 1;
-	signal status					: status_type;
-	signal ack						: status_type;
-	signal row_index				: integer range 0 to MAX_COLUMN - 1;
-	signal row_description		: line_type;
-	signal iteration				: integer range 0 to MAX_ITERATION;
-	signal undefined_cells		: integer range 0 to MAX_ROW * MAX_COLUMN;
+	signal clock						: std_logic;
+	signal vga_clock					: std_logic;
+	signal reset_n						: std_logic;
+	signal reset_sync					: std_logic;
+	signal level						: integer range -1 to MAX_LEVEL - 1;
+	signal status						: status_type;
+	signal ack							: status_type;
+	signal view_board_query			: query_type;
+	signal view_board_line			: line_type;
+	signal view_constraint_query	: query_type;
+	signal view_constraint_line	: constraint_line_type;
+	
+	signal board_query				: query_type;
+	signal board_w_not_r				: std_logic;
+	signal board_in_line				: line_type;
+	signal board_out_line			: line_type;
+	signal constraint_query			: query_type;
+	signal constraint_w_not_r		: std_logic;
+	signal constraint_in_line		: constraint_line_type;
+	signal constraint_out_line		: constraint_line_type;
+	signal iteration					: integer range 0 to MAX_ITERATION;
+	signal undefined_cells			: integer range 0 to MAX_LINE * MAX_LINE;
 	
 begin
 	
@@ -74,9 +85,12 @@ begin
 			VGA_SYNC_N				=> VGA_SYNC_N,
 			VGA_BLANK_N				=> VGA_BLANK_N,
 			
-			ROW_DESCRIPTION		=> row_description,
-			ROW_INDEX				=> row_index,
+			ROW_DESCRIPTION		=> view_board_line,
+			QUERY						=> view_board_query,
 			
+			CONSTRAINT_LINE		=> view_constraint_line,
+			CONSTRAINT_QUERY		=> view_constraint_query,
+						
 			LEVEL						=> level,
 			STATUS					=> status
 		);
@@ -116,19 +130,63 @@ begin
 	datapath : entity work.datapath
 		port map
 		(
+			CLOCK							=> clock,
+			RESET_N						=> reset_n,
+			
+			--controller interactions
+			LEVEL							=> level,
+			STATUS						=> status,
+			ACK							=> ack,
+			
+			--view interactions
+			ITERATION					=> iteration,
+			
+			--board interactions
+			BOARD_QUERY					=> board_query,
+			BOARD_W_NOT_R				=> board_w_not_r,
+			BOARD_INPUT_LINE			=> board_in_line,
+			BOARD_OUTPUT_LINE			=> board_out_line,
+			UNDEFINED_CELLS			=> undefined_cells,
+			
+			--constraints interactions
+			CONSTRAINT_QUERY			=> constraint_query,
+			CONSTRAINT_W_NOT_R		=> constraint_w_not_r,
+			CONSTRAINT_INPUT_LINE	=> constraint_in_line,
+			CONSTRAINT_OUTPUT_LINE	=> constraint_out_line
+		);
+	
+	board_datapath : entity work.board_datapath
+		port map
+		(
 			CLOCK						=> clock,
 			RESET_N					=> reset_n,
 			
-			LEVEL						=> level,
-			ROW_INDEX				=> row_index,
-			ROW_DESCRIPTION		=> row_description,
+			QUERY						=> board_query,
+			W_NOT_R					=> board_w_not_r,
+			INPUT_LINE				=> board_in_line,
+			OUTPUT_LINE				=> board_out_line,
+		
+			VIEW_QUERY				=> view_board_query,
+			VIEW_OUTPUT_LINE		=> view_board_line,
 			
-			STATUS					=> status,
-			ACK						=> ack,
-			
-			ITERATION				=> iteration,
 			UNDEFINED_CELLS		=> undefined_cells
 		);
+	
+	constraints_datapath : entity work.constraints_datapath
+		port map
+		(
+			CLOCK						=> clock,
+			RESET_N					=> reset_n,
+			
+			QUERY						=> constraint_query,
+			W_NOT_R					=> constraint_w_not_r,
+			INPUT_LINE				=> constraint_in_line,
+			OUTPUT_LINE				=> constraint_out_line,
+			
+			VIEW_QUERY				=> view_constraint_query,
+			VIEW_OUTPUT_LINE		=> view_constraint_line
+		);
+	
 	
 	-- processes
 	reset : process(clock)

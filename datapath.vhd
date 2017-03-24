@@ -7,26 +7,118 @@ entity datapath is
 
 	port
 	(
-		CLOCK					: 	in std_logic;
-		RESET_N				: 	in std_logic;
+		CLOCK							: 	in std_logic;
+		RESET_N						: 	in std_logic;
 		
-		LEVEL					:	in integer range -1 to MAX_LEVEL - 1;
-		ROW_INDEX			: 	in integer range 0 to MAX_COLUMN - 1;
-		ROW_DESCRIPTION	:	out line_type;
+		LEVEL							:	in integer range -1 to MAX_LEVEL - 1;	
+		STATUS						:	in status_type;
+		ACK							:	out status_type;
+			
+		ITERATION					:	out integer range 0 to MAX_ITERATION;
 		
-		STATUS				:	in status_type;
-		ACK					:	out status_type;
+		BOARD_QUERY					:	out query_type;
+		BOARD_W_NOT_R				:	out std_logic;
+		BOARD_INPUT_LINE			:  out line_type;
+		BOARD_OUTPUT_LINE			:  in line_type;
+		UNDEFINED_CELLS			:	in integer range 0 to MAX_LINE * MAX_LINE;
 		
-		ITERATION			:	out integer range 0 to MAX_ITERATION;
-		UNDEFINED_CELLS	:	out integer range 0 to MAX_ROW * MAX_COLUMN
+		CONSTRAINT_QUERY			:	out query_type;
+		CONSTRAINT_W_NOT_R		:	out std_logic;
+		CONSTRAINT_INPUT_LINE	:  out constraint_line_type;
+		CONSTRAINT_OUTPUT_LINE	:  in constraint_line_type
 	);
-	
-	function set_board_line(index : integer range 0 to MAX_LINE; input_line : line_type) return boolean;
-	
+		
 end datapath;
 
 architecture RTL of datapath is
+	
+	signal transposed_register				: integer := 0;
+	signal index_register						: integer := 0;
+	signal iteration_register 				: integer range 0 to MAX_ITERATION;
+	signal ack_register						: status_type := IDLE;
+	signal w_clock_divisor					: integer := 0;
+	
+begin
+	
+	
+	--PROCESSES
+	status_update : process(CLOCK, RESET_N)
+	begin
+		if(RESET_N = '0') then
+			ack_register <= IDLE;
+			iteration_register <= 0;
+			transposed_register <= 0;
+			index_register <= 0;
+			w_clock_divisor <= 0;
+			BOARD_W_NOT_R <= '0';
+			CONSTRAINT_W_NOT_R <= '0';
+		elsif(rising_edge(CLOCK)) then
+			case(STATUS) is
+				when IDLE =>
+					transposed_register <= 0;
+					index_register <= 0;
+					w_clock_divisor <= 0;
+					BOARD_W_NOT_R <= '0';
+					CONSTRAINT_W_NOT_R <= '0';
+					ack_register <= IDLE;
+				when LOAD =>
+					if(w_clock_divisor = 0) then
+						if(transposed_register = 0) then
+							BOARD_QUERY.index <= index_register;
+							BOARD_QUERY.transposed <= 0;
+							BOARD_W_NOT_R <= '1';
+							BOARD_INPUT_LINE <= load_board_row(LEVEL, index_register);
+							
+							CONSTRAINT_QUERY.index <= index_register;
+							CONSTRAINT_QUERY.transposed <= 0;
+							CONSTRAINT_W_NOT_R <= '1';
+							CONSTRAINT_INPUT_LINE <= load_constraint_line(LEVEL, transposed_register, index_register);
+						else
+							CONSTRAINT_QUERY.index <= index_register;
+							CONSTRAINT_QUERY.transposed <= 1;
+							CONSTRAINT_W_NOT_R <= '1';
+							CONSTRAINT_INPUT_LINE <= load_constraint_line(LEVEL, transposed_register, index_register);
+						end if;
+						w_clock_divisor <= w_clock_divisor + 1;
+					elsif(w_clock_divisor < W_PERIOD) then
+						w_clock_divisor <= w_clock_divisor + 1;
+					else
+						w_clock_divisor <= 0;
+						BOARD_W_NOT_R <= '0';
+						CONSTRAINT_W_NOT_R <= '0';
+						if(transposed_register = 0) then
+							if(index_register < MAX_LINE - 1) then
+								index_register <= index_register + 1;
+							else
+								index_register <= 0;
+								transposed_register <= 1;
+							end if;
+						else
+							if(index_register < MAX_LINE - 1) then
+								index_register <= index_register + 1;
+							else
+								index_register <= 0;
+								transposed_register <= 0;
+								ack_register <= LOAD;
+							end if;
+						end if;
+					end if;
+				when SOLVE_ITERATION =>
+					--solve_procedure(0);
+					ack_register <= SOLVE_ITERATION;
+				when SOLVE_ALL =>
+					--solve_procedure(1);
+					ack_register <= SOLVE_ALL;
+				when WON | LOST =>
+					ack_register <= ack_register;
+			end case;
 
+		end if;
+		ITERATION <= iteration_register;
+		ACK <= ack_register;
+	end process;
+	
+/*
 	--signals
 	type solver_status_type is (S_IDLE, S_ANALYZING, S_SIMPLE_BLOCKS, S_SIMPLE_SPACES, S_FINALIZING, S_CHECKING);
 	signal solver_status_register			: solver_status_type := S_IDLE;
@@ -35,15 +127,8 @@ architecture RTL of datapath is
 	signal loader_status_register			: loader_status_type := L_IDLE;
 	signal loader_ack							: std_logic_vector(MAX_LINE - 1 downto 0);
 	
-	signal ack_register						: status_type := IDLE;
 	
-	signal iteration_register				: integer range 0 to MAX_ITERATION;
-	signal undefined_cells_register		: integer range 0 to MAX_ROW * MAX_COLUMN;
-
-	signal board								: board_type;
-	signal constraints 						: constraint_matrix_type;
-	signal transposed							: integer := 0;
-	signal line_register						: integer := 0;
+	
 	
 	function set_board_line(index : integer range 0 to MAX_LINE; input_line : line_type) return boolean is
 	begin
@@ -264,7 +349,7 @@ architecture RTL of datapath is
 	end solve_procedure;
 	
 begin
-	/*
+	
 	--processes
 	analyzers : for i in 0 to MAX_LINE - 1 generate
 		analyzer : process(CLOCK, RESET_N)
@@ -327,7 +412,7 @@ begin
 			end if;
 		end process;
 	end generate;
-	*/
+	
 	row_description_update : process(CLOCK, RESET_N)
 	begin
 		if(RESET_N = '0') then
@@ -341,36 +426,5 @@ begin
 		end if;
 	end process;
 	
-	status_update : process(CLOCK, RESET_N)
-	begin
-		if(RESET_N = '0') then
-			board <= (others => (others => INVALID));
-			solver_status_register <= S_IDLE;
-			loader_status_register <= L_IDLE;
-			ack_register <= IDLE;
-			undefined_cells_register <= 0;
-			iteration_register <= 0;
-		elsif(rising_edge(CLOCK)) then
-			case(STATUS) is
-				when IDLE =>
-					undefined_cells_register <= get_undefined_cells(board);
-					solver_status_register <= S_IDLE;
-					loader_status_register <= L_IDLE;
-					ack_register <= IDLE;
-				when LOAD =>
-					load_procedure;
-				when SOLVE_ITERATION =>
-					solve_procedure(0);
-				when SOLVE_ALL =>
-					solve_procedure(1);
-				when WON | LOST =>
-					ack_register <= ack_register;
-			end case;
-
-		end if;
-		UNDEFINED_CELLS <= undefined_cells_register;
-		ITERATION <= iteration_register;
-		ACK <= ack_register;
-	end process;
-
+*/
 end architecture;

@@ -19,8 +19,11 @@ entity vga_view is
 		VGA_SYNC_N			: 	out std_logic;
 		
 		ROW_DESCRIPTION	:	in	line_type;
-		ROW_INDEX			: 	out integer;
+		QUERY					: 	out query_type;
 		
+		CONSTRAINT_LINE	: 	in constraint_line_type;
+		CONSTRAINT_QUERY	: 	out query_type;
+			
 		LEVEL					: 	in integer;
 		STATUS				:	in status_type
 	);
@@ -45,12 +48,12 @@ begin
 		variable old_y					: integer range 0 to TOTAL_H := 0;
 		variable x						: integer range 0 to VISIBLE_WIDTH := 0;
 		variable y						: integer range 0 to VISIBLE_HEIGHT := 0;
-		variable rows					: integer range 0 to MAX_COLUMN;
-		variable columns				: integer range 0 to MAX_ROW;
+		variable rows					: integer range 0 to MAX_LINE;
+		variable columns				: integer range 0 to MAX_LINE;
 		variable cell_x				: integer range 0 to CELL_SIZE - 1;
 		variable cell_y				: integer range 0 to CELL_SIZE - 1;
-		variable clue_x				: integer range 0 to MAX_ROW := 0;
-		variable clue_y				: integer range 0 to MAX_COLUMN := 0;
+		variable clue_x				: integer range 0 to MAX_LINE - 1 := 0;
+		variable clue_y				: integer range 0 to MAX_LINE - 1 := 0;
 		variable clue					: clue_type;
 		
 	begin
@@ -60,6 +63,8 @@ begin
 			old_y := 0;
 			x := 0;
 			y := 0;
+			QUERY <= (0, -1);
+			CONSTRAINT_QUERY <= (0, -1);
 			VGA_HS <= '0';
 			VGA_VS <= '0';
 			VGA_SYNC_N <= '1';
@@ -122,11 +127,11 @@ begin
 						else --not draw table
 						
 							--right side of the table			
-							if(x > 2 * PADDING + CELL_SIZE * columns and x <= 2 * PADDING + CELL_SIZE * columns + CELL_SIZE * get_clue_line_length(level, 0, (y - PADDING) / CELL_SIZE) and y < PADDING + CELL_SIZE * rows) then
+							if(x > 2 * PADDING + CELL_SIZE * columns and x <= 2 * PADDING + CELL_SIZE * columns + CELL_SIZE * MAX_CLUE_LINE and y < PADDING + CELL_SIZE * rows) then
 								
 								clue_x := (x - 2 * PADDING - CELL_SIZE * columns) / CELL_SIZE;
-								clue_y := (y - PADDING) / CELL_SIZE;
-								clue := LEVEL_INPUT(level).clues(0, clue_y, clue_x);
+								clue := CONSTRAINT_LINE(clue_x).size;
+								
 								cell_x := (x - 2 * PADDING - CELL_SIZE * columns) mod CELL_SIZE;
 								cell_y := (y - PADDING) mod CELL_SIZE;
 								
@@ -137,11 +142,11 @@ begin
 								end if;
 								
 							--bottom side of the table
-							elsif(y > 2 * PADDING + CELL_SIZE * rows and y <= 2 * PADDING + CELL_SIZE * rows + CELL_SIZE * get_clue_line_length(level, 1, (x - PADDING) / CELL_SIZE) and x < PADDING + CELL_SIZE * columns) then
+							elsif(y > 2 * PADDING + CELL_SIZE * rows and y <= 2 * PADDING + CELL_SIZE * rows + CELL_SIZE * MAX_CLUE_LINE and x < PADDING + CELL_SIZE * columns) then
 								
-								clue_x := (x - PADDING) / CELL_SIZE;
 								clue_y := (y - 2 * PADDING - CELL_SIZE * rows) / CELL_SIZE;
-								clue := LEVEL_INPUT(level).clues(1, clue_x, clue_y);
+								clue := CONSTRAINT_LINE(clue_y).size;
+								
 								cell_x := (x - PADDING) mod CELL_SIZE;
 								cell_y := (y - 2 * PADDING - CELL_SIZE * rows) mod CELL_SIZE;
 								
@@ -161,6 +166,7 @@ begin
 				else --outside visible screen
 					send_color(BLACK);
 				end if;
+				
 			end if;
 			
 			--update coordinates
@@ -175,7 +181,18 @@ begin
 				old_x := old_x + 1;
 			end if;
 			
-			ROW_INDEX <= (y - PADDING) / CELL_SIZE;
+			QUERY.transposed <= 0;
+			if((y - PADDING) / CELL_SIZE < MAX_LINE) then
+				QUERY.index <= (y - PADDING) / CELL_SIZE;
+			end if;
+			
+			if(x > 2 * PADDING + CELL_SIZE * columns and x <= 2 * PADDING + CELL_SIZE * columns + CELL_SIZE * MAX_CLUE_LINE and y > PADDING and y < PADDING + CELL_SIZE * rows) then
+				CONSTRAINT_QUERY.transposed <= 0;
+				CONSTRAINT_QUERY.index <= (y - PADDING) / CELL_SIZE;
+			elsif(y > 2 * PADDING + CELL_SIZE * rows and y <= 2 * PADDING + CELL_SIZE * rows + CELL_SIZE * MAX_CLUE_LINE and x < PADDING + CELL_SIZE * columns) then
+				CONSTRAINT_QUERY.transposed <= 1;
+				CONSTRAINT_QUERY.index <= (x - PADDING) / CELL_SIZE;
+			end if;	
 			
 		end if;
 	end process;

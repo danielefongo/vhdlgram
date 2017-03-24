@@ -11,7 +11,7 @@ entity hex_view is
 		RESET_N				: 	in std_logic;
 		
 		ITERATION			:	in	integer range 0 to MAX_ITERATION;
-		UNDEFINED_CELLS	:	in integer range 0 to MAX_COLUMN * MAX_ROW;
+		UNDEFINED_CELLS	:	in integer range 0 to MAX_LINE * MAX_LINE;
 	
 		HEX7					: out std_logic_vector(6 downto 0);
 		HEX6					: out std_logic_vector(6 downto 0);

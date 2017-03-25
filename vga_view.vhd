@@ -135,7 +135,7 @@ begin
 								cell_x := (x - 2 * PADDING - CELL_SIZE * columns) mod CELL_SIZE;
 								cell_y := (y - PADDING) mod CELL_SIZE;
 								
-								if(clue >= -1 and cell_x >= LINE_WIDTH and cell_y >= LINE_WIDTH and draw_number(clue, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
+								if(clue > 0 and cell_x >= LINE_WIDTH and cell_y >= LINE_WIDTH and draw_number(clue, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
 									send_color(NUMBER_COLOR);
 								else
 									send_color(BLACK);
@@ -150,7 +150,7 @@ begin
 								cell_x := (x - PADDING) mod CELL_SIZE;
 								cell_y := (y - 2 * PADDING - CELL_SIZE * rows) mod CELL_SIZE;
 								
-								if(clue >= -1 and cell_x >= LINE_WIDTH and cell_y >= LINE_WIDTH and draw_number(clue, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
+								if(clue > 0 and cell_x >= LINE_WIDTH and cell_y >= LINE_WIDTH and draw_number(clue, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
 									send_color(NUMBER_COLOR);
 								else
 									send_color(BLACK);

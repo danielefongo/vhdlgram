@@ -63,9 +63,7 @@ package body vga_package is
 	
 	function draw_digit( N : integer range -1 to 9; pixel_x: integer range 0 to 6; pixel_y: integer range 0 to 6 ) return boolean is
 	begin
-		if(N = -1) then --TODO: REMOVE
-			return true;
-		elsif(N = 0 and (
+		if(N = 0 and (
 			(pixel_x = 1) or
 			(pixel_x = 4) or
 			((pixel_y = 0 or pixel_y = 6) and pixel_x > 0 and pixel_x < 5))) then

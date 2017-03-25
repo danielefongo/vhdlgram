@@ -32,146 +32,183 @@ end datapath;
 
 architecture RTL of datapath is
 	
+	type solver_status_type is (S_IDLE, S_SYNCRONIZE, S_ANALYZING_LEFT, S_ANALYZING_RIGHT, S_ANALYZING_BLOCKS, S_ANALYSIS_FORWARD, S_SIMPLE_BLOCKS, S_SIMPLE_SPACES, S_FINALIZING, S_CHECKING);
+	attribute enum_encoding of solver_status_type : type is "sequential";
+	
+	signal solver_status_register			: solver_status_type := S_IDLE;
+	
 	signal transposed_register				: integer := 0;
-	signal index_register						: integer := 0;
+	signal index_register					: integer := 0;
 	signal iteration_register 				: integer range 0 to MAX_ITERATION;
 	signal ack_register						: status_type := IDLE;
 	signal w_clock_divisor					: integer := 0;
 	
-begin
 	
-	
-	--PROCESSES
-	status_update : process(CLOCK, RESET_N)
+	--PROCEDURES
+	procedure load_procedure is
 	begin
-		if(RESET_N = '0') then
-			ack_register <= IDLE;
-			iteration_register <= 0;
-			transposed_register <= 0;
-			index_register <= 0;
-			w_clock_divisor <= 0;
-			BOARD_W_NOT_R <= '0';
-			CONSTRAINT_W_NOT_R <= '0';
-		elsif(rising_edge(CLOCK)) then
-			case(STATUS) is
-				when IDLE =>
-					transposed_register <= 0;
-					index_register <= 0;
-					w_clock_divisor <= 0;
-					BOARD_W_NOT_R <= '0';
-					CONSTRAINT_W_NOT_R <= '0';
-					ack_register <= IDLE;
-				when LOAD =>
-					if(w_clock_divisor = 0) then
-						if(transposed_register = 0) then
-							BOARD_QUERY.index <= index_register;
-							BOARD_QUERY.transposed <= 0;
-							BOARD_W_NOT_R <= '1';
-							BOARD_INPUT_LINE <= load_board_row(LEVEL, index_register);
-							
-							CONSTRAINT_QUERY.index <= index_register;
-							CONSTRAINT_QUERY.transposed <= 0;
-							CONSTRAINT_W_NOT_R <= '1';
-							CONSTRAINT_INPUT_LINE <= load_constraint_line(LEVEL, transposed_register, index_register);
-						else
-							CONSTRAINT_QUERY.index <= index_register;
-							CONSTRAINT_QUERY.transposed <= 1;
-							CONSTRAINT_W_NOT_R <= '1';
-							CONSTRAINT_INPUT_LINE <= load_constraint_line(LEVEL, transposed_register, index_register);
-						end if;
-						w_clock_divisor <= w_clock_divisor + 1;
-					elsif(w_clock_divisor < W_PERIOD) then
-						w_clock_divisor <= w_clock_divisor + 1;
+		if(LEVEL = -1) then
+			ack_register <= LOAD;
+		else
+			if(w_clock_divisor = 0) then
+				if(transposed_register = 0) then
+					BOARD_QUERY.index <= index_register;
+					BOARD_QUERY.transposed <= 0;
+					BOARD_INPUT_LINE <= load_board_row(LEVEL, index_register);
+					BOARD_W_NOT_R <= '1';
+					
+					CONSTRAINT_QUERY.index <= index_register;
+					CONSTRAINT_QUERY.transposed <= 0;
+					CONSTRAINT_INPUT_LINE <= load_constraint_line(LEVEL, transposed_register, index_register);
+					CONSTRAINT_W_NOT_R <= '1';
+				else
+					CONSTRAINT_QUERY.index <= index_register;
+					CONSTRAINT_QUERY.transposed <= 1;
+					CONSTRAINT_INPUT_LINE <= load_constraint_line(LEVEL, transposed_register, index_register);
+					CONSTRAINT_W_NOT_R <= '1';
+				end if;
+				w_clock_divisor <= w_clock_divisor + 1;
+			elsif(w_clock_divisor < W_PERIOD / 2) then
+				w_clock_divisor <= w_clock_divisor + 1;
+			elsif(w_clock_divisor < W_PERIOD) then
+				BOARD_W_NOT_R <= '0';
+				w_clock_divisor <= w_clock_divisor + 1;
+			else
+				w_clock_divisor <= 0;
+				BOARD_W_NOT_R <= '0';
+				CONSTRAINT_W_NOT_R <= '0';
+				if(transposed_register = 0) then
+					if(index_register < MAX_LINE - 1) then
+						index_register <= index_register + 1;
 					else
-						w_clock_divisor <= 0;
-						BOARD_W_NOT_R <= '0';
-						CONSTRAINT_W_NOT_R <= '0';
-						if(transposed_register = 0) then
-							if(index_register < MAX_LINE - 1) then
-								index_register <= index_register + 1;
-							else
-								index_register <= 0;
-								transposed_register <= 1;
-							end if;
-						else
-							if(index_register < MAX_LINE - 1) then
-								index_register <= index_register + 1;
-							else
-								index_register <= 0;
-								transposed_register <= 0;
-								ack_register <= LOAD;
-							end if;
-						end if;
+						index_register <= 0;
+						transposed_register <= 1;
 					end if;
-				when SOLVE_ITERATION =>
-					--solve_procedure(0);
-					ack_register <= SOLVE_ITERATION;
-				when SOLVE_ALL =>
-					--solve_procedure(1);
-					ack_register <= SOLVE_ALL;
-				when WON | LOST =>
-					ack_register <= ack_register;
-			end case;
+				else
+					if(index_register < MAX_LINE - 1) then
+						index_register <= index_register + 1;
+					else
+						index_register <= 0;
+						transposed_register <= 0;
+						
+						iteration_register <= 0;
+						ITERATION <= 0;
 
-		end if;
-		ITERATION <= iteration_register;
-		ACK <= ack_register;
-	end process;
-	
-/*
-	--signals
-	type solver_status_type is (S_IDLE, S_ANALYZING, S_SIMPLE_BLOCKS, S_SIMPLE_SPACES, S_FINALIZING, S_CHECKING);
-	signal solver_status_register			: solver_status_type := S_IDLE;
-	
-	type loader_status_type is (L_IDLE, L_LOADING, L_ACK);
-	signal loader_status_register			: loader_status_type := L_IDLE;
-	signal loader_ack							: std_logic_vector(MAX_LINE - 1 downto 0);
-	
-	
-	
-	
-	function set_board_line(index : integer range 0 to MAX_LINE; input_line : line_type) return boolean is
-	begin
-		for i in 0 to MAX_LINE loop
-			if(transposed = 0 and i < MAX_ROW) then
-				board(i, index) <= input_line(i);
-			elsif(transposed = 1 and i < MAX_COLUMN) then
-				board(index, i) <= input_line(i);
+						ack_register <= LOAD;
+					end if;
+				end if;
 			end if;
-		end loop;
-		return true;
-	end function;
+		end if;
+	end procedure;
 	
-	--procedures
-	procedure analyze(index : integer range 0 to MAX_LINE - 1) is
-		variable tmp_line : line_type;
-		variable available_size : integer := 0;
-		variable clue_sum : integer := 0;
-		variable current_clue : integer := 0;
-		variable field_start : integer := -1;
-		variable field_end : integer := -1;
-		variable exit_analysis : boolean := false;
-		variable exit_clues : boolean := false;
-		variable block_found : boolean := false;
+	procedure simple_blocks is
+		variable tmp_board_line : line_type;
 	begin
-		if(LEVEL_INPUT(LEVEL).dim(1 - transposed) > index) then
-			tmp_line := get_board_line(board, transposed, index);
+		if(w_clock_divisor = 0) then
+			tmp_board_line := BOARD_OUTPUT_LINE;
+			for i in 0 to MAX_CLUE_LINE - 1 loop
+			if(CONSTRAINT_OUTPUT_LINE(i).size /= -1) then
+				for j in 0 to MAX_LINE - 1 loop
+				if(tmp_board_line(j) /= INVALID) then
+					if(j > CONSTRAINT_OUTPUT_LINE(i).max_end - CONSTRAINT_OUTPUT_LINE(i).size and 
+						j < CONSTRAINT_OUTPUT_LINE(i).min_start + CONSTRAINT_OUTPUT_LINE(i).size) then
+						tmp_board_line(j) := FULL;
+					end if;
+				end if;
+				end loop;
+			end if;
+			end loop;
+			
+			BOARD_INPUT_LINE <= tmp_board_line;
+			BOARD_W_NOT_R <= '1';
+			
+			w_clock_divisor <= w_clock_divisor + 1;
+		elsif(w_clock_divisor < W_PERIOD / 2) then
+			w_clock_divisor <= w_clock_divisor + 1;
+		elsif(w_clock_divisor < W_PERIOD) then
+			BOARD_W_NOT_R <= '0';
+			w_clock_divisor <= w_clock_divisor + 1;
+		else
+			BOARD_W_NOT_R <= '0';
+			w_clock_divisor <= 0;
+			solver_status_register <= S_SIMPLE_SPACES;
+		end if;
+	end procedure;
+	
+	procedure simple_spaces is
+		variable tmp_board_line : line_type;
+		variable last_constraint_max_end 			: integer range 0 to MAX_LINE := 0;
+	begin
+		if(w_clock_divisor = 0) then
+			tmp_board_line := BOARD_OUTPUT_LINE;
+			last_constraint_max_end := 0;
+			
+			for i in 0 to MAX_CLUE_LINE - 1 loop
+			if(CONSTRAINT_OUTPUT_LINE(i).size /= -1) then
+				for j in 0 to MAX_LINE - 1 loop
+				if(tmp_board_line(j) /= INVALID) then
+					if(j >= last_constraint_max_end and j < CONSTRAINT_OUTPUT_LINE(i).min_start) then
+						tmp_board_line(j) := EMPTY;
+					end if;
+				end if;
+				end loop;
+				last_constraint_max_end := CONSTRAINT_OUTPUT_LINE(i).max_end + 1;
+			end if;
+			end loop;
+			
+			for j in 0 to MAX_LINE - 1 loop
+				if(tmp_board_line(j) /= INVALID and j >= last_constraint_max_end) then
+					tmp_board_line(j) := EMPTY;
+				end if;
+			end loop;	
+			
+			BOARD_INPUT_LINE <= tmp_board_line;
+			BOARD_W_NOT_R <= '1';
+			
+			w_clock_divisor <= w_clock_divisor + 1;
+		elsif(w_clock_divisor < W_PERIOD / 2) then
+			w_clock_divisor <= w_clock_divisor + 1;
+		elsif(w_clock_divisor < W_PERIOD) then
+			BOARD_W_NOT_R <= '0';
+			w_clock_divisor <= w_clock_divisor + 1;
+		else
+			BOARD_W_NOT_R <= '0';
+			w_clock_divisor <= 0;
+			solver_status_register <= S_FINALIZING;
+		end if;
+	end procedure;
+	
+	procedure analyze_left is
+		variable	tmp_board_line					: line_type;
+		variable tmp_constraint_line			: constraint_line_type;
+		variable available_size 				: integer := 0;
+		variable constraint_sum 						: integer := 0;
+		variable current_constraint 					: integer := 0;
+		variable field_start 					: integer := -1;
+		variable field_end 						: integer := -1;
+		variable exit_analysis					: boolean := false;
+		variable exit_constraints 						: boolean := false;
+		variable block_found 					: boolean := false;
+	begin
+		if(w_clock_divisor = 0) then
+			tmp_board_line := BOARD_OUTPUT_LINE;
+			tmp_constraint_line := CONSTRAINT_OUTPUT_LINE;
 			
 			for i in 0 to MAX_LINE - 1 loop
-			if(tmp_line(i) = FULL or tmp_line(i) = UNDEFINED) then
+			if(tmp_board_line(i) = FULL or tmp_board_line(i) = UNDEFINED) then
 				available_size := available_size + 1;
 			end if;
 			end loop;
 			
 			for i in 0 to MAX_CLUE_LINE - 1 loop
-			if(constraints(transposed, index, i).size /= -1) then
-				clue_sum := clue_sum + constraints(transposed, index, i).size;
+			if(tmp_constraint_line(i).size /= -1) then
+				constraint_sum := constraint_sum + tmp_constraint_line(i).size;
 			end if;
 			end loop;
 			
 			for i in 0 to MAX_LINE - 1 loop
-			if(tmp_line(i) /= INVALID and exit_analysis = false) then
-				case(tmp_line(i)) is
+			if(tmp_board_line(i) /= INVALID and exit_analysis = false) then
+				case(tmp_board_line(i)) is
 					when FULL =>
 						block_found := true;
 						if(field_start = -1) then
@@ -184,39 +221,39 @@ begin
 						end if;
 						field_end := i;
 					when EMPTY =>
-						exit_clues := false;
+						exit_constraints := false;
 						if(field_start /= -1 and field_end /= -1) then
 							for j in 0 to MAX_CLUE_LINE - 1 loop
-							if(j >= current_clue and constraints(transposed, index, j).size /= -1 and exit_analysis = false and exit_clues = false) then
-								if(field_end - field_start + 1 >= constraints(transposed, index, current_clue).size) then
-									if(constraints(transposed, index, current_clue).min_start < field_start) then
-										constraints(transposed, index, current_clue).min_start <= field_start;
+							if(j >= current_constraint and tmp_constraint_line(j).size /= -1 and exit_analysis = false and exit_constraints = false) then
+								if(field_end - field_start + 1 >= tmp_constraint_line(current_constraint).size) then
+									if(tmp_constraint_line(current_constraint).min_start < field_start) then
+										tmp_constraint_line(current_constraint).min_start := field_start;
 									end if;
 									
-									if(block_found = false and available_size - (field_end - field_start + 1) >= clue_sum) then
+									if(block_found = false and available_size - (field_end - field_start + 1) >= constraint_sum) then
 										exit_analysis := true;
 									else --univocal
-										if(constraints(transposed, index, current_clue).max_end > field_end) then
-											constraints(transposed, index, current_clue).max_end <= field_end;
+										if(tmp_constraint_line(current_constraint).max_end > field_end) then
+											tmp_constraint_line(current_constraint).max_end := field_end;
 										end if;
 										
-										if(field_end - field_start + 1 = constraints(transposed, index, current_clue).size) then
-											available_size := available_size - constraints(transposed, index, current_clue).size;
+										if(field_end - field_start + 1 = tmp_constraint_line(current_constraint).size) then
+											available_size := available_size - tmp_constraint_line(current_constraint).size;
 										else
-											available_size := available_size - constraints(transposed, index, current_clue).size - 1;
+											available_size := available_size - tmp_constraint_line(current_constraint).size - 1;
 										end if;
 										
-										field_start := field_start + constraints(transposed, index, current_clue).size + 1;
-										clue_sum := clue_sum - constraints(transposed, index, current_clue).size;
-										current_clue := current_clue + 1;
+										field_start := field_start + tmp_constraint_line(current_constraint).size + 1;
+										constraint_sum := constraint_sum - tmp_constraint_line(current_constraint).size;
+										current_constraint := current_constraint + 1;
 										block_found := false;
 										
 										if(field_end - field_start < 0) then
-											exit_clues := true;
+											exit_constraints := true;
 										end if;
 									end if;
 								else
-									exit_clues := true;
+									exit_constraints := true;
 									available_size := available_size - (field_end - field_start + 1);
 								end if;
 							end if;
@@ -229,202 +266,424 @@ begin
 				end case;
 			end if;
 			end loop;
+			
+			CONSTRAINT_INPUT_LINE <= tmp_constraint_line;
+			CONSTRAINT_W_NOT_R <= '1';
+			
+			w_clock_divisor <= w_clock_divisor + 1;
+		elsif(w_clock_divisor < W_PERIOD / 2) then
+			w_clock_divisor <= w_clock_divisor + 1;
+		elsif(w_clock_divisor < W_PERIOD) then
+			CONSTRAINT_W_NOT_R <= '0';
+			w_clock_divisor <= w_clock_divisor + 1;
+		else
+			CONSTRAINT_W_NOT_R <= '0';
+			w_clock_divisor <= 0;
+			solver_status_register <= S_ANALYZING_RIGHT;
 		end if;
-	end analyze;
+	end procedure;
 	
-	procedure simple_blocks(index : integer range 0 to MAX_LINE - 1) is
-		variable tmp_line : line_type;
-		variable check : boolean;
+	procedure analyze_right is
+		variable	tmp_board_line					: line_type;
+		variable tmp_constraint_line			: constraint_line_type;
+		variable available_size 				: integer := 0;
+		variable constraint_sum 						: integer := 0;
+		variable current_constraint 					: integer := 0;
+		variable field_start 					: integer := -1;
+		variable field_end 						: integer := -1;
+		variable exit_analysis					: boolean := false;
+		variable exit_constraints 						: boolean := false;
+		variable block_found 					: boolean := false;
 	begin
-		if(LEVEL_INPUT(LEVEL).dim(1 - transposed) > index) then
-			tmp_line := get_board_line(board, transposed, index);
-			for i in 0 to MAX_CLUE_LINE - 1 loop
-			if(constraints(transposed, index, i).size /= -1) then
-				for j in 0 to MAX_LINE - 1 loop
-				if(LEVEL_INPUT(LEVEL).dim(transposed) > j) then
-					if(j >= constraints(transposed, index, i).max_end + 1 - constraints(transposed, index, i).size and 
-						j < constraints(transposed, index, i).min_start + constraints(transposed, index, i).size) then
-						tmp_line(j) := FULL;
-					end if;
-				end if;
-				end loop;
+		if(w_clock_divisor = 0) then
+			tmp_board_line := BOARD_OUTPUT_LINE;
+			tmp_constraint_line := CONSTRAINT_OUTPUT_LINE;
+			
+			for i in 0 to MAX_LINE - 1 loop
+			if(tmp_board_line(i) = FULL or tmp_board_line(i) = UNDEFINED) then
+				available_size := available_size + 1;
 			end if;
 			end loop;
-			check := set_board_line(index, tmp_line);
-		end if;
-	end simple_blocks;
-	
-	procedure simple_spaces(index : integer range 0 to MAX_LINE - 1) is
-		variable last_clue_max_end : integer range 0 to MAX_LINE - 1 := 0;
-		variable tmp_line : line_type;
-		variable check : boolean;
-	begin
-		if(LEVEL_INPUT(LEVEL).dim(1 - transposed) > index) then
-			tmp_line := get_board_line(board, transposed, index);
+			
 			for i in 0 to MAX_CLUE_LINE - 1 loop
-			if(constraints(transposed, index, i).size /= -1) then
-				for j in 0 to MAX_LINE - 1 loop
-				if(LEVEL_INPUT(LEVEL).dim(transposed) > j) then
-					if(j >= last_clue_max_end and j < constraints(transposed, index, i).min_start) then
-						tmp_line(j) := EMPTY;
-					end if;
-				end if;
-				end loop;
-				last_clue_max_end := constraints(transposed, index, i).max_end + 1;
+			if(tmp_constraint_line(i).size /= -1) then
+				constraint_sum := constraint_sum + tmp_constraint_line(i).size;
+				current_constraint := current_constraint + 1;
 			end if;
 			end loop;
-			for j in 0 to MAX_LINE - 1 loop
-				if(LEVEL_INPUT(LEVEL).dim(transposed) > j and j >= last_clue_max_end) then
-					tmp_line(j) := EMPTY;
-				end if;
-			end loop;
-			check := set_board_line(index, tmp_line);
-		end if;
-	end simple_spaces;
-
-	procedure load_procedure is
-	begin
-		case(loader_status_register) is
-			when L_IDLE =>
-				ack_register <= IDLE;
-				board <= load_board(LEVEL);
-				constraints <= load_constraints(LEVEL);
-				loader_status_register <= L_LOADING;
-			when L_LOADING =>
-				if(check_board(LEVEL, board) and check_constraints(LEVEL, constraints)) then --and loader_ack = (loader_ack'range => '1')) then 
-					loader_status_register <= L_ACK;
-				else
-					board <= load_board(LEVEL);
-					constraints <= load_constraints(LEVEL);
-					loader_status_register <= L_LOADING;
-				end if;
-			when L_ACK =>
-				iteration_register <= 0;
-				ack_register <= LOAD;
-				loader_status_register <= L_IDLE;
-		end case;
-	end load_procedure;
-	
-	procedure solve_procedure(operation : integer range 0 to 1) is
-	begin
-		case(solver_status_register) is
-			when S_IDLE =>
-				line_register <= 0;
-				solver_status_register <= S_ANALYZING;
-			when S_ANALYZING =>
-				analyze(line_register);
-				solver_status_register <= S_SIMPLE_BLOCKS;
-			when S_SIMPLE_BLOCKS =>
-				simple_blocks(line_register);
-				solver_status_register <= S_SIMPLE_SPACES;
-			when S_SIMPLE_SPACES =>
-				simple_spaces(line_register);
-				solver_status_register <= S_FINALIZING;
-			when S_FINALIZING =>
-				if(line_register < MAX_LINE - 1) then
-					line_register <= line_register + 1;
-					solver_status_register <= S_ANALYZING;
-				else
-					iteration_register <= iteration_register + 1;
-					transposed <= 1 - transposed;
-					undefined_cells_register <= get_undefined_cells(board);
-					solver_status_register <= S_CHECKING;
-				end if;
-			when S_CHECKING =>
-				if(undefined_cells_register = 0) then
-					ack_register <= WON;
-					solver_status_register <= S_IDLE; 
-				elsif(iteration_register >= MAX_ITERATION - 1) then
-					ack_register <= LOST;
-					solver_status_register <= S_IDLE; 
-				else
-					if(operation = 0) then
-						ack_register <= SOLVE_ITERATION;
-						solver_status_register <= S_IDLE; 
-					else
-						solver_status_register <= S_ANALYZING;
-					end if;
-				end if;
-		end case;
-	end solve_procedure;
-	
-begin
-	
-	--processes
-	analyzers : for i in 0 to MAX_LINE - 1 generate
-		analyzer : process(CLOCK, RESET_N)
-			variable loader_ack_register : std_logic := '0';
-			variable clue_line_length : integer := 0;
-			variable left_clues_sum : integer;
-			variable right_clues_sum : integer;
-		begin
-			if(RESET_N = '0') then
-				loader_ack(i) <= '0';
-				loader_ack_register := '0';
-			elsif(rising_edge(CLOCK)) then
-				if(loader_status_register = L_LOADING) then
-					for t in 0 to 1 loop
-						if(i < LEVEL_INPUT(LEVEL).dim(1 - t)) then
-							
-							clue_line_length := get_clue_line_length(level, t, i);
-							left_clues_sum := 0;
-							right_clues_sum := 0;
-							
-							for j in 0 to MAX_CLUE_LINE -1 loop
-							if(j < clue_line_length) then
-								right_clues_sum := right_clues_sum + LEVEL_INPUT(level).clues(t, i, j) + 1;
-							end if;
-							end loop;
-								
-							for j in 0 to MAX_CLUE_LINE -1 loop
-							if(j < clue_line_length) then
-								constraints(t, i, j).size <= LEVEL_INPUT(level).clues(t, i, j);
-								
-								right_clues_sum := right_clues_sum - LEVEL_INPUT(level).clues(t, i, j) - 1;
-								
-								constraints(t, i, j).min_start <= left_clues_sum;
-								constraints(t, i, j).max_end <= LEVEL_INPUT(level).dim(t) - 1 - right_clues_sum;
-								
-								left_clues_sum := left_clues_sum + LEVEL_INPUT(level).clues(t, i , j) + 1;
-							end if;
-							end loop;
-							
-							--check
-							loader_ack_register := '1';
-							for j in 0 to MAX_CLUE_LINE -1 loop
-							if(j < clue_line_length) then
-								if (constraints(t, i, j).size /= LEVEL_INPUT(level).clues(t, i, j)) then
-									loader_ack_register := '0';
+			
+			current_constraint := current_constraint - 1;
+			
+			for i in MAX_LINE - 1 downto 0 loop
+			if(tmp_board_line(i) /= INVALID and exit_analysis = false) then
+				case(tmp_board_line(i)) is
+					when FULL =>
+						block_found := true;
+						if(field_end = -1) then
+							field_end := i;
+						end if;
+						field_start := i;
+					when UNDEFINED =>
+						if(field_end = -1) then
+							field_end := i;
+						end if;
+						field_start := i;
+					when EMPTY =>
+						exit_constraints := false;
+						if(field_start /= -1 and field_end /= -1) then
+							for j in MAX_CLUE_LINE - 1 downto 0 loop
+							if(j <= current_constraint and tmp_constraint_line(j).size /= -1 and exit_analysis = false and exit_constraints = false) then
+								if(field_end - field_start + 1 >= tmp_constraint_line(current_constraint).size) then
+									if(tmp_constraint_line(current_constraint).max_end > field_end) then
+										tmp_constraint_line(current_constraint).max_end := field_end;
+									end if;
+									
+									if(block_found = false and available_size - (field_end - field_start + 1) >= constraint_sum) then
+										exit_analysis := true;
+									else --univocal
+										if(tmp_constraint_line(current_constraint).min_start < field_start) then
+											tmp_constraint_line(current_constraint).min_start := field_start;
+										end if;
+										
+										if(field_end - field_start + 1 = tmp_constraint_line(current_constraint).size) then
+											available_size := available_size - tmp_constraint_line(current_constraint).size;
+										else
+											available_size := available_size - tmp_constraint_line(current_constraint).size - 1;
+										end if;
+										
+										field_end := field_end - tmp_constraint_line(current_constraint).size - 1;
+										constraint_sum := constraint_sum - tmp_constraint_line(current_constraint).size;
+										current_constraint := current_constraint - 1;
+										block_found := false;
+										
+										if(field_end - field_start < 0) then
+											exit_constraints := true;
+										end if;
+									end if;
+								else
+									exit_constraints := true;
+									available_size := available_size - (field_end - field_start + 1);
 								end if;
 							end if;
 							end loop;
-							loader_ack(i) <= loader_ack_register;
-						else
-							loader_ack(i) <= '1';
 						end if;
-					end loop;
+						field_start := -1;
+						field_end := -1;
+						block_found := false;
+					when others =>
+				end case;
+			end if;
+			end loop;
+			
+			CONSTRAINT_INPUT_LINE <= tmp_constraint_line;
+			CONSTRAINT_W_NOT_R <= '1';
+			
+			w_clock_divisor <= w_clock_divisor + 1;
+		elsif(w_clock_divisor < W_PERIOD / 2) then
+			w_clock_divisor <= w_clock_divisor + 1;
+		elsif(w_clock_divisor < W_PERIOD) then
+			CONSTRAINT_W_NOT_R <= '0';
+			w_clock_divisor <= w_clock_divisor + 1;
+		else
+			CONSTRAINT_W_NOT_R <= '0';
+			w_clock_divisor <= 0;
+			solver_status_register <= S_ANALYZING_BLOCKS;
+		end if;
+	end procedure;
+	
+	
+	procedure analyze_blocks is
+		variable tmp_board_line : line_type;
+		variable tmp_constraint_line : constraint_line_type;
+		variable field_start : integer := -1;
+		variable field_end : integer := -1;
+		variable blockfield_start : integer := -1;
+		variable blockfield_end : integer := -1;
+		variable last_univocal_blockfield_start : integer := -1;
+		variable last_univocal_blockfield_end : integer := -1;
+		variable last_univocal_constraint : integer := -1;
+		variable last_univocal : boolean := true;
+		variable constraint_counter : integer := 0;
+		variable current_constraint : integer := 0;
+	begin
+		if(w_clock_divisor = 0) then
+			tmp_board_line := BOARD_OUTPUT_LINE;	
+			tmp_constraint_line := CONSTRAINT_OUTPUT_LINE;
+			
+			
+			--logic
+			for i in 0 to MAX_LINE - 1 loop
+			if(tmp_board_line(i) /= INVALID) then
+				case(tmp_board_line(i)) is
+					when FULL =>
+						if(field_start = -1) then
+							field_start := i;
+						end if;
+						field_end := i;
+						if(blockfield_start = -1) then
+							blockfield_start := i;
+						end if;
+						blockfield_end := i;
+					when UNDEFINED | EMPTY =>
+						if(tmp_board_line(i) = UNDEFINED) then
+							if(field_start = -1) then
+								field_start := i;
+							end if;
+							field_end := i;
+						end if;
+						
+						if(last_univocal = true and blockfield_start /= -1 and blockfield_end /= -1) then
+							constraint_counter := 0;
+							for j in 0 to MAX_CLUE_LINE - 1 loop
+							if(tmp_constraint_line(j).size /= -1 and tmp_constraint_line(j).min_start <= blockfield_start and tmp_constraint_line(j).max_end >= blockfield_end) then
+								constraint_counter := constraint_counter + 1;
+								current_constraint := j;
+							end if;
+							end loop;
+							
+							if(constraint_counter = 1) then
+								if(last_univocal_blockfield_start /= -1 and last_univocal_blockfield_end /= -1) then
+									if(current_constraint = last_univocal_constraint) then
+										if(tmp_constraint_line(current_constraint).max_end > last_univocal_blockfield_start + tmp_constraint_line(current_constraint).size - 1) then
+											tmp_constraint_line(current_constraint).max_end := last_univocal_blockfield_start + tmp_constraint_line(current_constraint).size - 1;
+										end if;
+									elsif(last_univocal_blockfield_end = blockfield_start - 2) then
+										tmp_constraint_line(last_univocal_constraint).max_end := last_univocal_blockfield_end;
+										tmp_constraint_line(current_constraint).min_start := blockfield_start;
+									end if;
+								end if;
+								
+								if(tmp_constraint_line(current_constraint).min_start < blockfield_end - tmp_constraint_line(current_constraint).size + 1) then
+									tmp_constraint_line(current_constraint).min_start := blockfield_end - tmp_constraint_line(current_constraint).size + 1;
+								end if;
+								
+								if(tmp_board_line(i) = UNDEFINED) then
+									if(tmp_constraint_line(current_constraint).min_start < field_start) then
+										tmp_constraint_line(current_constraint).min_start := field_start;
+									end if;
+								else
+									if(tmp_constraint_line(current_constraint).max_end > field_end) then
+										tmp_constraint_line(current_constraint).max_end := field_end;
+									end if;
+								end if;
+								
+								if(tmp_constraint_line(current_constraint).max_end > blockfield_start + tmp_constraint_line(current_constraint).size - 1) then
+									tmp_constraint_line(current_constraint).max_end := blockfield_start + tmp_constraint_line(current_constraint).size - 1;
+								end if;
+								
+								last_univocal_blockfield_start := blockfield_start;
+								last_univocal_blockfield_end := blockfield_end;
+								last_univocal_constraint := current_constraint;
+								last_univocal := true;
+								
+							else
+								last_univocal := false;
+							end if;
+						end if;
+						
+						blockfield_start := -1;
+						blockfield_end := -1;
+						
+						if(tmp_board_line(i) = EMPTY) then
+							last_univocal := true;
+							last_univocal_constraint := -1;
+							last_univocal_blockfield_start := -1;
+							last_univocal_blockfield_end := -1;
+							field_start := -1;
+							field_end := -1;
+						end if;
+						
+					when others =>
+				end case;
+			end if;
+			end loop;
+			
+			CONSTRAINT_INPUT_LINE <= tmp_constraint_line;
+			CONSTRAINT_W_NOT_R <= '1';
+			
+			w_clock_divisor <= w_clock_divisor + 1;
+		elsif(w_clock_divisor < W_PERIOD / 2) then
+			w_clock_divisor <= w_clock_divisor + 1;
+		elsif(w_clock_divisor < W_PERIOD) then
+			CONSTRAINT_W_NOT_R <= '0';
+			w_clock_divisor <= w_clock_divisor + 1;
+		else
+			CONSTRAINT_W_NOT_R <= '0';
+			w_clock_divisor <= 0;
+			solver_status_register <= S_ANALYSIS_FORWARD;
+		end if;
+	end procedure;
+	
+	procedure analysis_forward is
+		variable tmp_constraint_line : constraint_line_type;
+		variable last_constraint_min_start : integer;
+		variable last_constraint_max_end : integer := -1;
+		variable last_constraint_size : integer;
+	begin
+		if(w_clock_divisor = 0) then
+			tmp_constraint_line := CONSTRAINT_OUTPUT_LINE;
+			
+			--logic
+			last_constraint_min_start := tmp_constraint_line(0).min_start;
+			last_constraint_size := tmp_constraint_line(0).size;
+			for i in 1 to MAX_CLUE_LINE - 1 loop
+			if(tmp_constraint_line(i).size /= -1) then
+				if(tmp_constraint_line(i).min_start < last_constraint_min_start + last_constraint_size + 1) then
+					tmp_constraint_line(i).min_start := last_constraint_min_start + last_constraint_size + 1;
+				end if;
+				
+				last_constraint_size := tmp_constraint_line(i).size;
+				last_constraint_min_start := tmp_constraint_line(i).min_start;
+			end if;
+			end loop;
+			
+			for i in MAX_CLUE_LINE - 1 downto 0 loop
+			if(tmp_constraint_line(i).size /= -1) then
+				if(last_constraint_max_end = -1) then
+					last_constraint_max_end := tmp_constraint_line(i).max_end;
+					last_constraint_size := tmp_constraint_line(i).size;
 				else
-					loader_ack(i) <= '0';
-					if(solver_status_register = S_ANALYZING) then
-						--analyze(i);
+					if(tmp_constraint_line(i).max_end > last_constraint_max_end - last_constraint_size - 1) then
+						tmp_constraint_line(i).max_end := last_constraint_max_end - last_constraint_size - 1;
 					end if;
+					
+					last_constraint_size := tmp_constraint_line(i).size;
+					last_constraint_max_end := tmp_constraint_line(i).max_end;
 				end if;
 			end if;
-		end process;
-	end generate;
+			end loop;
+			
+			CONSTRAINT_INPUT_LINE <= tmp_constraint_line;
+			CONSTRAINT_W_NOT_R <= '1';
+			
+			w_clock_divisor <= w_clock_divisor + 1;
+		elsif(w_clock_divisor < W_PERIOD / 2) then
+			w_clock_divisor <= w_clock_divisor + 1;
+		elsif(w_clock_divisor < W_PERIOD) then
+			CONSTRAINT_W_NOT_R <= '0';
+			w_clock_divisor <= w_clock_divisor + 1;
+		else
+			CONSTRAINT_W_NOT_R <= '0';
+			w_clock_divisor <= 0;
+			solver_status_register <= S_SIMPLE_BLOCKS;
+		end if;
+	end procedure;
 	
-	row_description_update : process(CLOCK, RESET_N)
+begin
+	
+	--PROCESSES
+	status_update : process(CLOCK, RESET_N)	
 	begin
 		if(RESET_N = '0') then
-			ROW_DESCRIPTION <= (others => INVALID);
+			ack_register <= IDLE;
+			iteration_register <= 0;
+			ITERATION <= 0;
+			transposed_register <= 0;
+			index_register <= 0;
+			w_clock_divisor <= 0;
+			solver_status_register <= S_IDLE;
+			BOARD_W_NOT_R <= '0';
+			CONSTRAINT_W_NOT_R <= '0';
 		elsif(rising_edge(CLOCK)) then
-			if(ROW_INDEX >= LEVEL_INPUT(LEVEL).dim(1)) then
-				ROW_DESCRIPTION <= (others => INVALID);
-			else
-				ROW_DESCRIPTION <= get_board_line(board, 0, ROW_INDEX);
-			end if;
+			case(STATUS) is
+				when IDLE =>
+					transposed_register <= 0;
+					index_register <= 0;
+					w_clock_divisor <= 0;
+					solver_status_register <= S_IDLE;
+					BOARD_W_NOT_R <= '0';
+					CONSTRAINT_W_NOT_R <= '0';
+					ack_register <= IDLE;
+				when LOAD =>
+					load_procedure;
+					
+				when SOLVE_ITERATION | SOLVE_ALL =>
+					case(solver_status_register) is
+						when S_IDLE =>
+							index_register <= 0;
+							transposed_register <= iteration_register mod 2;
+							
+							BOARD_W_NOT_R <= '0';
+							BOARD_QUERY.index <= 0;
+							BOARD_QUERY.transposed <= iteration_register mod 2;
+							CONSTRAINT_W_NOT_R <= '0';
+							CONSTRAINT_QUERY.index <= 0;
+							CONSTRAINT_QUERY.transposed <= iteration_register mod 2;
+								
+							solver_status_register <= S_SYNCRONIZE;
+						
+						when S_SYNCRONIZE =>
+							if(w_clock_divisor < W_PERIOD - 1) then
+								BOARD_W_NOT_R <= '0';
+								CONSTRAINT_W_NOT_R <= '0';
+								w_clock_divisor <= w_clock_divisor + 1;
+							else
+								w_clock_divisor <= 0;
+								solver_status_register <= S_ANALYZING_LEFT;
+							end if;
+						
+						when S_ANALYZING_LEFT =>
+							analyze_left;
+							
+						when S_ANALYZING_RIGHT =>
+							analyze_right;
+							
+						when S_ANALYZING_BLOCKS =>
+							analyze_blocks;
+						
+						when S_ANALYSIS_FORWARD =>
+							analysis_forward;
+						
+						when S_SIMPLE_BLOCKS =>
+							simple_blocks;
+							
+						when S_SIMPLE_SPACES =>
+							simple_spaces;
+							
+						when S_FINALIZING =>
+							BOARD_W_NOT_R <= '0';
+							CONSTRAINT_W_NOT_R <= '0';
+							
+							if(index_register < MAX_LINE - 1) then
+								BOARD_QUERY.index <= index_register + 1;
+								CONSTRAINT_QUERY.index <= index_register + 1;
+								
+								index_register <= index_register + 1;
+								solver_status_register <= S_SYNCRONIZE;
+							else
+								ITERATION <= iteration_register + 1;
+								
+								index_register <= 0;
+								BOARD_QUERY.index <= 0;
+								BOARD_QUERY.transposed <= (iteration_register + 1) mod 2;
+								CONSTRAINT_QUERY.index <= 0;
+								CONSTRAINT_QUERY.transposed <= (iteration_register + 1) mod 2;
+							
+								transposed_register <= (iteration_register + 1) mod 2;
+								iteration_register <= iteration_register + 1;
+								solver_status_register <= S_CHECKING;
+							end if;
+							
+						when S_CHECKING =>
+							if(UNDEFINED_CELLS = 0) then
+								ack_register <= WON;
+								solver_status_register <= S_IDLE; 
+							elsif(iteration_register >= MAX_ITERATION - 1) then
+								ack_register <= LOST;
+								solver_status_register <= S_IDLE; 
+							else
+								if(STATUS = SOLVE_ITERATION) then
+									ack_register <= SOLVE_ITERATION; 
+								end if;
+								solver_status_register <= S_IDLE;
+							end if;
+					end case;
+				when WON | LOST =>
+					ack_register <= ack_register;
+			end case;
+
 		end if;
+		ITERATION <= iteration_register;
+		ACK <= ack_register;
 	end process;
-	
-*/
 end architecture;

@@ -54,16 +54,18 @@ package vga_package is
 	constant NUMBER_COLOR 	:	color_type 	:= WHITE;
 	
 	--FUNCTIONS
-	function draw_digit ( N : integer range 0 to 9; pixel_x: integer range 0 to 6; pixel_y: integer range 0 to 6 ) return boolean;
-	function draw_number ( N : integer range 0 to 19; pixel_x: integer range 0 to 6; pixel_y: integer range 0 to 6 ) return boolean;
+	function draw_digit ( N : integer range -1 to 9; pixel_x: integer range 0 to 6; pixel_y: integer range 0 to 6 ) return boolean;
+	function draw_number ( N : integer range -1 to 19; pixel_x: integer range 0 to 6; pixel_y: integer range 0 to 6 ) return boolean;
 	
 end package;
 
 package body vga_package is
 	
-	function draw_digit( N : integer range 0 to 9; pixel_x: integer range 0 to 6; pixel_y: integer range 0 to 6 ) return boolean is
+	function draw_digit( N : integer range -1 to 9; pixel_x: integer range 0 to 6; pixel_y: integer range 0 to 6 ) return boolean is
 	begin
-		if(N = 0 and (
+		if(N = -1) then --TODO: REMOVE
+			return true;
+		elsif(N = 0 and (
 			(pixel_x = 1) or
 			(pixel_x = 4) or
 			((pixel_y = 0 or pixel_y = 6) and pixel_x > 0 and pixel_x < 5))) then
@@ -114,7 +116,7 @@ package body vga_package is
 		return false;
 	end draw_digit;
 
-	function draw_number( N : integer range 0 to 19; pixel_x: integer range 0 to 6; pixel_y: integer range 0 to 6 ) return boolean is
+	function draw_number( N : integer range -1 to 19; pixel_x: integer range 0 to 6; pixel_y: integer range 0 to 6 ) return boolean is
 	begin
 		if( N > 9 ) then
 			if(pixel_x = 0) then

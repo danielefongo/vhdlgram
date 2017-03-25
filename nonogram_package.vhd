@@ -6,13 +6,13 @@ use ieee.std_logic_1164.all;
 package nonogram_package is
 
 	--CONSTANTS
-	constant MAX_LINE					: integer := 10;
-	constant MAX_CLUE_LINE			: integer := 5; -- CEIL(MAX_LINE / 2)
+	constant MAX_LINE					: integer := 5;
+	constant MAX_CLUE_LINE			: integer := 3; -- CEIL(MAX_LINE / 2)
 	
 	constant MAX_CLUE					: integer := 19;
 	constant MAX_LEVEL				: integer := 4;
 	constant MAX_ITERATION			: integer := 30;
-	constant W_PERIOD					: integer := 4;
+	constant W_PERIOD					: integer := 8;
 	
 	--TYPES
 	attribute enum_encoding	: string;
@@ -146,7 +146,7 @@ package nonogram_package is
 				(1,2),
 				others => (-1, -1)
 			)
-		),
+		),/*
 		(
 			dim 				=> (9,10),
 			clues				=> 
@@ -185,7 +185,7 @@ package nonogram_package is
 			(
 				others => (-1, -1)
 			)
-		),
+		),*/
 		others => EMPTY_LEVEL
 	);
 	
@@ -221,12 +221,13 @@ package body nonogram_package is
 	
 	function load_constraint_line(level : integer range 0 to MAX_LEVEL - 1; transposed : integer range 0 to 1; index : integer range 0 to MAX_LINE - 1) return constraint_line_type is
 		variable result : constraint_line_type := (others => (-1,0,0));
-		variable left_clues_sum : integer;
-		variable right_clues_sum : integer;
-		variable clue_line_length : integer;
+		variable left_clues_sum : integer := 0;
+		variable right_clues_sum : integer := 0;
 	begin
+		
 		if(index < LEVEL_INPUT(level).dim(1 - transposed)) then
-
+			
+			/*
 			left_clues_sum := 0;
 			right_clues_sum := 0;
 			
@@ -235,18 +236,19 @@ package body nonogram_package is
 				right_clues_sum := right_clues_sum + LEVEL_INPUT(level).clues(transposed, index, i) + 1;
 			end if;
 			end loop;
-				
+			*/	
 			for i in 0 to MAX_CLUE_LINE -1 loop
 			if(LEVEL_INPUT(level).clues(transposed, index, i) /= -1) then
-				right_clues_sum := right_clues_sum - LEVEL_INPUT(level).clues(transposed, index, i) - 1;
+				--right_clues_sum := right_clues_sum - LEVEL_INPUT(level).clues(transposed, index, i) - 1;
 				
 				result(i).size := LEVEL_INPUT(level).clues(transposed, index, i);
-				result(i).min_start := left_clues_sum;
-				result(i).max_end := LEVEL_INPUT(level).dim(transposed) - 1 - right_clues_sum;
+				result(i).min_start := 0;--left_clues_sum;
+				result(i).max_end := LEVEL_INPUT(level).dim(transposed) - 1;-- - right_clues_sum;
 				
-				left_clues_sum := left_clues_sum + LEVEL_INPUT(level).clues(transposed, index, i) + 1;
+				--left_clues_sum := left_clues_sum + LEVEL_INPUT(level).clues(transposed, index, i) + 1;
 			end if;
-			end loop;	
+			end loop;
+			
 		end if;
 		return result;
 	end function;

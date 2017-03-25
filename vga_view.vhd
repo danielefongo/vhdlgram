@@ -54,7 +54,7 @@ begin
 		variable cell_y				: integer range 0 to CELL_SIZE - 1;
 		variable clue_x				: integer range 0 to MAX_LINE - 1 := 0;
 		variable clue_y				: integer range 0 to MAX_LINE - 1 := 0;
-		variable clue					: clue_type;
+		variable clue					: integer;
 		
 	begin
 		
@@ -135,7 +135,7 @@ begin
 								cell_x := (x - 2 * PADDING - CELL_SIZE * columns) mod CELL_SIZE;
 								cell_y := (y - PADDING) mod CELL_SIZE;
 								
-								if(clue > 0 and cell_x >= LINE_WIDTH and cell_y >= LINE_WIDTH and draw_number(clue, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
+								if(clue >= -1 and cell_x >= LINE_WIDTH and cell_y >= LINE_WIDTH and draw_number(clue, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
 									send_color(NUMBER_COLOR);
 								else
 									send_color(BLACK);
@@ -150,7 +150,7 @@ begin
 								cell_x := (x - PADDING) mod CELL_SIZE;
 								cell_y := (y - 2 * PADDING - CELL_SIZE * rows) mod CELL_SIZE;
 								
-								if(clue > 0 and cell_x >= LINE_WIDTH and cell_y >= LINE_WIDTH and draw_number(clue, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
+								if(clue >= -1 and cell_x >= LINE_WIDTH and cell_y >= LINE_WIDTH and draw_number(clue, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
 									send_color(NUMBER_COLOR);
 								else
 									send_color(BLACK);

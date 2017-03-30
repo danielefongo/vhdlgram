@@ -37,7 +37,7 @@ end nonogram;
 
 architecture RTL of nonogram is
 
-	-- Signal declaration
+	--SIGNALS
 	signal clock						: std_logic;
 	signal vga_clock					: std_logic;
 	signal reset_n						: std_logic;
@@ -63,7 +63,8 @@ architecture RTL of nonogram is
 	
 begin
 	
-	--entities
+	--ENTITIES
+	--pll
 	pll: entity work.PLL
 		port map
 		(
@@ -72,6 +73,7 @@ begin
 				c1			=> vga_clock
 		);
 		
+	--views
 	vga_view : entity work.vga_view
 		port map 
 		(
@@ -112,6 +114,7 @@ begin
 			HEX0						=> HEX0
 		);
 		
+	--controllers
 	input_controller : entity work.input_controller
 		port map
 		(
@@ -132,29 +135,26 @@ begin
 		(
 			CLOCK							=> clock,
 			RESET_N						=> reset_n,
-			
-			--controller interactions
+
 			LEVEL							=> level,
 			STATUS						=> status,
 			ACK							=> ack,
-			
-			--view interactions
+
 			ITERATION					=> iteration,
-			
-			--board interactions
+						
 			BOARD_QUERY					=> board_query,
 			BOARD_W_NOT_R				=> board_w_not_r,
 			BOARD_INPUT_LINE			=> board_in_line,
 			BOARD_OUTPUT_LINE			=> board_out_line,
 			UNDEFINED_CELLS			=> undefined_cells,
 			
-			--constraints interactions
 			CONSTRAINT_QUERY			=> constraint_query,
 			CONSTRAINT_W_NOT_R		=> constraint_w_not_r,
 			CONSTRAINT_INPUT_LINE	=> constraint_in_line,
 			CONSTRAINT_OUTPUT_LINE	=> constraint_out_line
 		);
 	
+	--datapaths
 	board_datapath : entity work.board_datapath
 		port map
 		(
@@ -187,8 +187,7 @@ begin
 			VIEW_OUTPUT_LINE		=> view_constraint_line
 		);
 	
-	
-	-- processes
+	--PROCESSES
 	reset : process(clock)
 	begin
 		if(rising_edge(clock)) then
@@ -202,7 +201,8 @@ begin
 		VGA_CLK <= vga_clock;
 	end process;
 	
-	--debugging TODO: remove this
+	--DEBUGGING
+	--TODO: remove this
 	led_status_debug : process(clock, reset_n)
 	begin
 		if(reset_n = '0') then

@@ -21,17 +21,17 @@ entity hex_view is
 		HEX0					: out std_logic_vector(6 downto 0)
 	);
 	
-	--types
+	--TYPES
 	subtype hex_digit	is std_logic_vector(6 downto 0);
 	
-	--functions
+	--FUNCTIONS
 	function write_digit(N : integer range 0 to 9) return hex_digit;
 	
 end entity;
 
 architecture RTL of hex_view is
 
-	--functions
+	--FUNCTIONS
 	function write_digit(N : integer range 0 to 9) return hex_digit is
 		variable result : hex_digit := (others => '1');
 	begin
@@ -63,6 +63,7 @@ architecture RTL of hex_view is
 
 begin
 
+	--PROCESSES
 	iteration_write : process(CLOCK, RESET_N)
 	begin
 		if(RESET_N = '0') then

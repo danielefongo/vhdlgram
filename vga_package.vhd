@@ -4,7 +4,7 @@ use ieee.std_logic_1164.all;
 
 package vga_package is
 	
-	--types
+	--TYPES
 	subtype color_type is std_logic_vector(0 to 23);
 	
 	--CONSTANTS
@@ -61,6 +61,7 @@ end package;
 
 package body vga_package is
 	
+	--FUNCTIONS
 	function draw_digit( N : integer range -1 to 9; pixel_x: integer range 0 to 6; pixel_y: integer range 0 to 6 ) return boolean is
 	begin
 		if(N = 0 and (

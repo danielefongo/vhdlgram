@@ -6,8 +6,8 @@ use ieee.std_logic_1164.all;
 package nonogram_package is
 
 	--CONSTANTS
-	constant MAX_LINE					: integer := 5;
-	constant MAX_CLUE_LINE			: integer := 3; -- CEIL(MAX_LINE / 2)
+	constant MAX_LINE					: integer := 10;
+	constant MAX_CLUE_LINE			: integer := 5; -- CEIL(MAX_LINE / 2)
 	
 	constant MAX_CLUE					: integer := 19;
 	constant MAX_LEVEL				: integer := 4;
@@ -28,7 +28,7 @@ package nonogram_package is
 		y				: integer range -1 to (MAX_LINE - 1); -- -1 for invalid cell position
 	end record;
 	
-	type cell_array_position_type is array(integer range <>) of cell_position_type;
+	type cell_array_position_type is array(integer range 0 to MAX_LINE * MAX_LINE - 1) of cell_position_type;
 	
 	--board
 	type board_type is array(integer range 0 to MAX_LINE - 1, integer range 0 to MAX_LINE - 1) of cell_type;
@@ -38,7 +38,7 @@ package nonogram_package is
 	
 	--clues
 	subtype clue_type is integer range -1 to MAX_CLUE; -- -1 for invalid clue
-	type clue_matrix_type is array(integer range <>, integer range <>, integer range <>) of clue_type; 
+	type clue_matrix_type is array(integer range 0 to 1, integer range 0 to MAX_LINE - 1, integer range 0 to MAX_CLUE_LINE - 1) of clue_type; 
 
 	--constraints
 	type constraint_type is record
@@ -47,15 +47,15 @@ package nonogram_package is
 		max_end			: integer range 0 to MAX_LINE - 1;
 	end record;
 	type constraint_line_type is array(integer range 0 to MAX_CLUE_LINE - 1) of constraint_type;
-	type constraint_matrix_type is array(integer range 0 to 1, integer range 0 to MAX_LINE - 1, integer range 0 to MAX_CLUE_LINE) of constraint_type;
+	type constraint_matrix_type is array(integer range 0 to 1, integer range 0 to MAX_LINE - 1, integer range 0 to MAX_CLUE_LINE - 1) of constraint_type;
 	
 	--levels
-	type dim_type is array(integer range <>) of integer range 0 to MAX_LINE - 1;
+	type dim_type is array(integer range 0 to 1) of integer range 0 to MAX_LINE - 1;
 	type level_type is record
-		dim				: 	dim_type(0 to 1); --Be careful. Max real dimension is 30x40.
-		clues				:	clue_matrix_type(0 to 1, 0 to MAX_LINE - 1, 0 to MAX_CLUE_LINE - 1);
-		full_cells		:	cell_array_position_type(0 to MAX_LINE * MAX_LINE - 1);
-		empty_cells		:	cell_array_position_type(0 to MAX_LINE * MAX_LINE - 1);
+		dim				: 	dim_type; --Be careful. Max real dimension is 30x40.
+		clues				:	clue_matrix_type;
+		full_cells		:	cell_array_position_type;
+		empty_cells		:	cell_array_position_type;
 	end record;
 	type level_array_type is array(integer range 0 to MAX_LEVEL - 1) of level_type;
 	
@@ -182,31 +182,14 @@ package body nonogram_package is
 	
 	function load_constraint_line(level : integer range 0 to MAX_LEVEL - 1; transposed : integer range 0 to 1; index : integer range 0 to MAX_LINE - 1) return constraint_line_type is
 		variable result : constraint_line_type := (others => (-1,0,0));
-		variable left_clues_sum : integer := 0;
-		variable right_clues_sum : integer := 0;
 	begin
 		
 		if(index < LEVEL_INPUT(level).dim(1 - transposed)) then
-			
-			/*
-			left_clues_sum := 0;
-			right_clues_sum := 0;
-			
 			for i in 0 to MAX_CLUE_LINE -1 loop
-			if(LEVEL_INPUT(level).clues(transposed, index, i) /= -1) then
-				right_clues_sum := right_clues_sum + LEVEL_INPUT(level).clues(transposed, index, i) + 1;
-			end if;
-			end loop;
-			*/	
-			for i in 0 to MAX_CLUE_LINE -1 loop
-			if(LEVEL_INPUT(level).clues(transposed, index, i) /= -1) then
-				--right_clues_sum := right_clues_sum - LEVEL_INPUT(level).clues(transposed, index, i) - 1;
-				
+			if(LEVEL_INPUT(level).clues(transposed, index, i) /= -1) then	
 				result(i).size := LEVEL_INPUT(level).clues(transposed, index, i);
-				result(i).min_start := 0;--left_clues_sum;
-				result(i).max_end := LEVEL_INPUT(level).dim(transposed) - 1;-- - right_clues_sum;
-				
-				--left_clues_sum := left_clues_sum + LEVEL_INPUT(level).clues(transposed, index, i) + 1;
+				result(i).min_start := 0;
+				result(i).max_end := LEVEL_INPUT(level).dim(transposed) - 1;
 			end if;
 			end loop;
 			

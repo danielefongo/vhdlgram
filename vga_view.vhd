@@ -32,7 +32,7 @@ end;
 
 architecture RTL of vga_view is
 
-	--procedures
+	--PROCEDURES
 	procedure send_color ( color : color_type ) is
 	begin
 		VGA_R <= color(0 to 7);
@@ -42,7 +42,7 @@ architecture RTL of vga_view is
 
 begin
 		
-	--processes
+	--PROCESSES
 	draw : process(CLOCK, RESET_N)
 		variable old_x					: integer range 0 to TOTAL_W := 0;
 		variable old_y					: integer range 0 to TOTAL_H := 0;
@@ -74,14 +74,14 @@ begin
 			VGA_BLANK_N <= '1';
 			VGA_SYNC_N <= '0';
 			
-			--Vertical sync
+			--vertical sync
 			if (old_y < VERTICAL_SYNC_PULSE) then 
 				VGA_VS <= '0';
 			else
 				VGA_VS <= '1';
 			end if;
 			
-			--Horizontal sync
+			--horizontal sync
 			if (old_x < HORIZONTAL_SYNC_PULSE) then 
 				VGA_HS <= '0';
 			else
@@ -134,7 +134,7 @@ begin
 								cell_x := (x - 2 * PADDING - CELL_SIZE * columns) mod CELL_SIZE;
 								cell_y := (y - PADDING) mod CELL_SIZE;
 								
-								if(clue > 0 and cell_x >= LINE_WIDTH and cell_y >= LINE_WIDTH and draw_number(clue, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
+								if(clue > -1 and cell_x >= LINE_WIDTH and cell_y >= LINE_WIDTH and draw_number(clue, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
 									send_color(NUMBER_COLOR);
 								else
 									send_color(BLACK);
@@ -149,16 +149,16 @@ begin
 								cell_x := (x - PADDING) mod CELL_SIZE;
 								cell_y := (y - 2 * PADDING - CELL_SIZE * rows) mod CELL_SIZE;
 								
-								if(clue > 0 and cell_x >= LINE_WIDTH and cell_y >= LINE_WIDTH and draw_number(clue, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
+								if(clue > -1 and cell_x >= LINE_WIDTH and cell_y >= LINE_WIDTH and draw_number(clue, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
 									send_color(NUMBER_COLOR);
 								else
 									send_color(BLACK);
 								end if;
 							
-							-- TODO: elsif show_status
+							--TODO: elsif show_status
 							
 							else --rest of the window
-								send_color(BLACK); --TODO: change to black.
+								send_color(BLACK);
 							end if;
 						end if;
 					end if;

@@ -23,24 +23,25 @@ end input_controller;
 
 architecture RTL of input_controller is
 
-	--signals
+	--TYPES
 	type debounce_status_type is (D_IDLE, BUTTONPRESS, WAITRELEASE);
+	type level_update_status_type is (LEVEL_IDLE, LEVEL_UPDATING);
+	
+	--SIGNALS
 	signal key2_status	 					: debounce_status_type := D_IDLE;
 	signal key3_status 						: debounce_status_type := D_IDLE;
 	
 	signal solve_iteration_register		: std_logic := '0';
 	signal solve_all_register				: std_logic := '0';
 	
-	type level_update_status_type is (LEVEL_IDLE, LEVEL_UPDATING);
 	signal level_register					: integer range -1 to MAX_LEVEL - 1 := -1;
-	signal level_update_register			: std_logic := '0';
 	signal level_update_status				: level_update_status_type := LEVEL_IDLE;
 	
 	signal status_register					: status_type := IDLE;
 
 begin
 	
-	--processes
+	--PROCESSES
 	key3_debouncer : process(CLOCK, RESET_N)
 	begin
 		if(RESET_N = '0') then
@@ -93,8 +94,6 @@ begin
 			status_register <= IDLE;
 			STATUS <= IDLE;
 		elsif(rising_edge(CLOCK)) then
-			/*if(level_update_register = '1') then
-				status_register <= LOAD;*/
 			if(SW(17 downto 14) = "1000" and level_register /= 0) then
 				LEVEL <= 0;
 				level_register <= 0;

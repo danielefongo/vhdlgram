@@ -32,9 +32,11 @@ end game_controller;
 
 architecture RTL of game_controller is
 	
+	--TYPES
 	type solver_status_type is (S_IDLE, S_SYNCRONIZE, S_ANALYZING_LEFT, S_ANALYZING_RIGHT, S_ANALYZING_BLOCKS, S_ANALYSIS_FORWARD, S_SIMPLE_BLOCKS, S_SIMPLE_SPACES, S_FINALIZING, S_CHECKING);
 	attribute enum_encoding of solver_status_type : type is "sequential";
 	
+	--SIGNALS
 	signal solver_status_register			: solver_status_type := S_IDLE;
 	signal transposed_register				: integer range 0 to 1 := 0;
 	signal index_register					: integer range 0 to MAX_LINE := 0;
@@ -338,7 +340,6 @@ architecture RTL of game_controller is
 		CONSTRAINT_W_NOT_R <= '1';
 	end procedure;
 	
-	
 	procedure analyze_blocks is
 		variable tmp_board_line 				: line_type;
 		variable tmp_constraint_line 			: constraint_line_type;
@@ -355,8 +356,7 @@ architecture RTL of game_controller is
 	begin
 		tmp_board_line := BOARD_OUTPUT_LINE;	
 		tmp_constraint_line := CONSTRAINT_OUTPUT_LINE;
-		
-		--logic
+
 		for i in 0 to MAX_LINE - 1 loop
 		if(tmp_board_line(i) /= INVALID) then
 			case(tmp_board_line(i)) is
@@ -454,8 +454,7 @@ architecture RTL of game_controller is
 		variable last_constraint_size 			: integer range -1 to MAX_LINE;
 	begin
 		tmp_constraint_line := CONSTRAINT_OUTPUT_LINE;
-			
-		--logic
+
 		last_constraint_min_start := tmp_constraint_line(0).min_start;
 		last_constraint_size := tmp_constraint_line(0).size;
 		for i in 1 to MAX_CLUE_LINE - 1 loop
@@ -690,4 +689,5 @@ begin
 		ITERATION <= iteration_register;
 		ACK <= ack_register;
 	end process;
+	
 end architecture;

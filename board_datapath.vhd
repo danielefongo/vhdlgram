@@ -28,6 +28,7 @@ end board_datapath;
 
 architecture RTL of board_datapath is
 
+	--SIGNALS
 	signal board 						: board_type := (others => (others => INVALID));
 	
 	--FUNCTIONS
@@ -46,7 +47,7 @@ architecture RTL of board_datapath is
 	
 begin 
 
-	--processes
+	--PROCESSES
 	query_process : process(CLOCK, RESET_N)
 	begin
 		if(RESET_N = '0') then

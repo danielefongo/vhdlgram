@@ -3,7 +3,7 @@ use ieee.numeric_std.all;
 use ieee.std_logic_1164.all;
 use work.nonogram_package.all;
 
-entity controller is
+entity input_controller is
 
 	port
 	(
@@ -19,9 +19,9 @@ entity controller is
 		KEY					:	in std_logic_vector(3 downto 2)
 	);
 
-end controller;
+end input_controller;
 
-architecture RTL of controller is
+architecture RTL of input_controller is
 
 	--signals
 	type debounce_status_type is (D_IDLE, BUTTONPRESS, WAITRELEASE);

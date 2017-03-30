@@ -112,7 +112,7 @@ begin
 			HEX0						=> HEX0
 		);
 		
-	controller : entity work.controller
+	input_controller : entity work.input_controller
 		port map
 		(
 			CLOCK						=> clock,
@@ -127,7 +127,7 @@ begin
 			KEY						=> KEY(3 downto 2)
 		);
 	
-	datapath : entity work.datapath
+	game_controller : entity work.game_controller
 		port map
 		(
 			CLOCK							=> clock,
@@ -224,6 +224,7 @@ begin
 			end case;
 		end if;
 	end process;
+	
 	led_level_debug : process(clock, reset_n)
 	begin
 		if(reset_n = '0') then

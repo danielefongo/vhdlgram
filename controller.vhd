@@ -11,7 +11,7 @@ entity controller is
 		RESET_N				: 	in std_logic;
 		
 		SW						:	in std_logic_vector(17 downto 1);
-		LEVEL					:	out integer;
+		LEVEL					:	out integer range -1 to MAX_LEVEL - 1;
 		
 		ACK					:	in status_type;
 		STATUS				:	out status_type;
@@ -31,16 +31,16 @@ architecture RTL of controller is
 	signal solve_iteration_register		: std_logic := '0';
 	signal solve_all_register				: std_logic := '0';
 	
-	type level_update_status_type is (L_IDLE, UPDATING);
+	type level_update_status_type is (LEVEL_IDLE, LEVEL_UPDATING);
 	signal level_register					: integer range -1 to MAX_LEVEL - 1 := -1;
 	signal level_update_register			: std_logic := '0';
-	signal level_update_status				: level_update_status_type := L_IDLE;
+	signal level_update_status				: level_update_status_type := LEVEL_IDLE;
 	
 	signal status_register					: status_type := IDLE;
-	--processes
 
 begin
 	
+	--processes
 	key3_debouncer : process(CLOCK, RESET_N)
 	begin
 		if(RESET_N = '0') then
@@ -87,58 +87,34 @@ begin
 		end if;
 	end process;
 	
-	level_select : process(CLOCK, RESET_N)
-	begin
-		if(RESET_N = '0') then
-			level_update_register <= '0';
-			level_register <= -1;
-			level_update_status <= L_IDLE;
-			LEVEL <= level_register;
-		elsif(rising_edge(CLOCK)) then 
-			
-			if(SW(17) = '1') then
-				if(level_register /= 0 and level_update_status = L_IDLE) then
-					level_update_register <= '1';
-					level_update_status <= UPDATING;
-				end if;
-				level_register <= 0;
-			elsif(SW(16) = '1' ) then
-				if(level_register /= 1 and level_update_status = L_IDLE) then
-					level_update_register <= '1';
-					level_update_status <= UPDATING;
-				end if;
-				level_register <= 1;
-			elsif(SW(15) = '1') then
-				if(level_register /= 2 and level_update_status = L_IDLE) then
-					level_update_register <= '1';
-					level_update_status <= UPDATING;
-				end if;
-				level_register <= 2;
-			else
-				if(level_register /= -1 and level_update_status = L_IDLE) then
-					level_update_register <= '1';
-					level_update_status <= UPDATING;
-				end if;
-				level_register <= -1;
-			end if;
-
-			if(level_update_status = UPDATING) then --TODO: check this
-				level_update_register <= '0';
-				level_update_status <= L_IDLE;
-			end if;
-			
-			LEVEL <= level_register;
-		end if;
-	end process;
-	
 	status_update : process(CLOCK, RESET_N)
 	begin
 		if(RESET_N = '0') then
 			status_register <= IDLE;
-			STATUS <= status_register;
+			STATUS <= IDLE;
 		elsif(rising_edge(CLOCK)) then
-			if(level_update_register = '1') then
+			/*if(level_update_register = '1') then
+				status_register <= LOAD;*/
+			if(SW(17 downto 14) = "1000" and level_register /= 0) then
+				LEVEL <= 0;
+				level_register <= 0;
 				status_register <= LOAD;
+			elsif(SW(17 downto 14) = "0100" and level_register /= 1) then
+				LEVEL <= 1;
+				level_register <= 1;
+				status_register <= LOAD;
+			elsif(SW(17 downto 14) = "0010" and level_register /= 2) then
+				LEVEL <= 2;
+				level_register <= 2;
+				status_register <= LOAD;
+			elsif(SW(17 downto 14) = "0001" and level_register /= 3) then
+				LEVEL <= 3;
+				level_register <= 3;
+				status_register <= LOAD;
+			elsif(SW(17 downto 14) = "0000") then
+				LEVEL <= -1;
+				level_register <= -1;
+				status_register <= IDLE;
 			else
 				case(status_register) is
 					when IDLE =>
@@ -148,6 +124,8 @@ begin
 							status_register <= SOLVE_ALL;
 						elsif(solve_iteration_register = '1') then
 							status_register <= SOLVE_ITERATION;
+						else
+							status_register <= IDLE;
 						end if;
 					when LOAD =>
 						if(ACK = LOAD) then

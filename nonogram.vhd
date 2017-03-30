@@ -22,7 +22,7 @@ entity nonogram is
 		VGA_BLANK_N				: out std_logic;
 		VGA_CLK					: out std_logic;
 		
-		HEX7						: out std_logic_vector(6 downto 0) := "0000000";
+		HEX7						: out std_logic_vector(6 downto 0);
 		HEX6						: out std_logic_vector(6 downto 0);
 		HEX3						: out std_logic_vector(6 downto 0);
 		HEX2						: out std_logic_vector(6 downto 0);
@@ -38,17 +38,28 @@ end nonogram;
 architecture RTL of nonogram is
 
 	-- Signal declaration
-	signal clock					: std_logic;
-	signal vga_clock				: std_logic;
-	signal reset_n					: std_logic;
-	signal reset_sync				: std_logic;
-	signal level					: integer range -1 to MAX_LEVEL - 1;
-	signal status					: status_type;
-	signal ack						: status_type;
-	signal row_index				: integer range 0 to MAX_COLUMN - 1;
-	signal row_description		: line_type;
-	signal iteration				: integer range 0 to MAX_ITERATION - 1;
-	signal undefined_cells		: integer range 0 to MAX_ROW * MAX_COLUMN - 1;
+	signal clock						: std_logic;
+	signal vga_clock					: std_logic;
+	signal reset_n						: std_logic;
+	signal reset_sync					: std_logic;
+	signal level						: integer range -1 to MAX_LEVEL - 1;
+	signal status						: status_type;
+	signal ack							: status_type;
+	signal view_board_query			: query_type;
+	signal view_board_line			: line_type;
+	signal view_constraint_query	: query_type;
+	signal view_constraint_line	: constraint_line_type;
+	
+	signal board_query				: query_type;
+	signal board_w_not_r				: std_logic;
+	signal board_in_line				: line_type;
+	signal board_out_line			: line_type;
+	signal constraint_query			: query_type;
+	signal constraint_w_not_r		: std_logic;
+	signal constraint_in_line		: constraint_line_type;
+	signal constraint_out_line		: constraint_line_type;
+	signal iteration					: integer range 0 to MAX_ITERATION;
+	signal undefined_cells			: integer range 0 to MAX_LINE * MAX_LINE;
 	
 begin
 	
@@ -74,11 +85,31 @@ begin
 			VGA_SYNC_N				=> VGA_SYNC_N,
 			VGA_BLANK_N				=> VGA_BLANK_N,
 			
-			ROW_DESCRIPTION		=> row_description,
-			ROW_INDEX				=> row_index,
+			ROW_DESCRIPTION		=> view_board_line,
+			QUERY						=> view_board_query,
 			
+			CONSTRAINT_LINE		=> view_constraint_line,
+			CONSTRAINT_QUERY		=> view_constraint_query,
+						
 			LEVEL						=> level,
 			STATUS					=> status
+		);
+		
+	hex_view : entity work.hex_view
+		port map
+		(
+			CLOCK						=> vga_clock,			
+			RESET_N					=> reset_n,
+			
+			ITERATION				=> iteration,
+			UNDEFINED_CELLS		=> undefined_cells,
+
+			HEX7						=> HEX7,
+			HEX6						=> HEX6,
+			HEX3						=> HEX3,
+			HEX2						=> HEX2,
+			HEX1						=> HEX1,
+			HEX0						=> HEX0
 		);
 		
 	controller : entity work.controller
@@ -96,6 +127,67 @@ begin
 			KEY						=> KEY(3 downto 2)
 		);
 	
+	datapath : entity work.datapath
+		port map
+		(
+			CLOCK							=> clock,
+			RESET_N						=> reset_n,
+			
+			--controller interactions
+			LEVEL							=> level,
+			STATUS						=> status,
+			ACK							=> ack,
+			
+			--view interactions
+			ITERATION					=> iteration,
+			
+			--board interactions
+			BOARD_QUERY					=> board_query,
+			BOARD_W_NOT_R				=> board_w_not_r,
+			BOARD_INPUT_LINE			=> board_in_line,
+			BOARD_OUTPUT_LINE			=> board_out_line,
+			UNDEFINED_CELLS			=> undefined_cells,
+			
+			--constraints interactions
+			CONSTRAINT_QUERY			=> constraint_query,
+			CONSTRAINT_W_NOT_R		=> constraint_w_not_r,
+			CONSTRAINT_INPUT_LINE	=> constraint_in_line,
+			CONSTRAINT_OUTPUT_LINE	=> constraint_out_line
+		);
+	
+	board_datapath : entity work.board_datapath
+		port map
+		(
+			CLOCK						=> clock,
+			RESET_N					=> reset_n,
+			
+			QUERY						=> board_query,
+			W_NOT_R					=> board_w_not_r,
+			INPUT_LINE				=> board_in_line,
+			OUTPUT_LINE				=> board_out_line,
+		
+			VIEW_QUERY				=> view_board_query,
+			VIEW_OUTPUT_LINE		=> view_board_line,
+			
+			UNDEFINED_CELLS		=> undefined_cells
+		);
+	
+	constraints_datapath : entity work.constraints_datapath
+		port map
+		(
+			CLOCK						=> clock,
+			RESET_N					=> reset_n,
+			
+			QUERY						=> constraint_query,
+			W_NOT_R					=> constraint_w_not_r,
+			INPUT_LINE				=> constraint_in_line,
+			OUTPUT_LINE				=> constraint_out_line,
+			
+			VIEW_QUERY				=> view_constraint_query,
+			VIEW_OUTPUT_LINE		=> view_constraint_line
+		);
+	
+	
 	-- processes
 	reset : process(clock)
 	begin
@@ -110,15 +202,8 @@ begin
 		VGA_CLK <= vga_clock;
 	end process;
 	
-	--pseudodatapath TODO: implement real datapath
-	pseudo_datapath : process(clock, reset_n)
-	begin
-		row_description <= (FULL, UNDEFINED, EMPTY, others=>(INVALID));
-		ACK <= status;
-	end process;
-	
-	--debugging
-	led_debugging : process(clock, reset_n)
+	--debugging TODO: remove this
+	led_status_debug : process(clock, reset_n)
 	begin
 		if(reset_n = '0') then
 			LEDG <= "000000000";
@@ -136,6 +221,30 @@ begin
 					LEDG <= "000001000";
 				when LOST =>
 					LEDG <= "000000100";
+			end case;
+		end if;
+	end process;
+	led_level_debug : process(clock, reset_n)
+	begin
+		if(reset_n = '0') then
+			LEDR <= (others => '0');
+		elsif(rising_edge(clock)) then
+			case(level) is
+				when -1 =>
+					LEDR(0) <= '1';
+					LEDR(17 downto 1) <= (others => '0');
+				when 0 =>
+					LEDR(17) <= '1';
+					LEDR(16 downto 0) <= (others => '0');
+				when 1 =>
+					LEDR(17 downto 16) <= "01";
+					LEDR(15 downto 0) <= (others => '0');
+				when 2 =>
+					LEDR(17 downto 15) <= "001";
+					LEDR(14 downto 0) <= (others => '0');
+				when 3 =>
+					LEDR(17 downto 14) <= "0001";
+					LEDR(13 downto 0) <= (others => '0');
 			end case;
 		end if;
 	end process;

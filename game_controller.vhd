@@ -156,8 +156,8 @@ architecture RTL of game_controller is
 		variable available_size 				: integer range 0 to MAX_LINE := 0;
 		variable constraint_sum 				: integer range 0 to MAX_LINE := 0;
 		variable current_constraint 			: integer range 0 to MAX_CLUE_LINE := 0;
-		variable field_start 					: integer range 0 to MAX_LINE - 1 := -1;
-		variable field_end 						: integer range 0 to MAX_LINE - 1 := -1;
+		variable field_start 					: integer range -1 to MAX_LINE := -1;
+		variable field_end 						: integer range -1 to MAX_LINE := -1;
 		variable exit_analysis					: boolean := false;
 		variable exit_constraints 				: boolean := false;
 		variable block_found 					: boolean := false;
@@ -246,11 +246,11 @@ architecture RTL of game_controller is
 	procedure analyze_right is
 		variable tmp_board_line					: line_type;
 		variable tmp_constraint_line			: constraint_line_type;
-		variable available_size 				: integer range 0 to MAX_LINE := 0;
+			variable available_size 			: integer range 0 to MAX_LINE := 0;
 		variable constraint_sum 				: integer range 0 to MAX_LINE := 0;
 		variable current_constraint 			: integer range 0 to MAX_CLUE_LINE := 0;
-		variable field_start 					: integer range 0 to MAX_LINE - 1 := -1;
-		variable field_end 						: integer range 0 to MAX_LINE - 1 := -1;
+		variable field_start 					: integer range -1 to MAX_LINE := -1;
+		variable field_end 						: integer range -1 to MAX_LINE := -1;
 		variable exit_analysis					: boolean := false;
 		variable exit_constraints 				: boolean := false;
 		variable block_found 					: boolean := false;
@@ -342,13 +342,13 @@ architecture RTL of game_controller is
 	procedure analyze_blocks is
 		variable tmp_board_line 				: line_type;
 		variable tmp_constraint_line 			: constraint_line_type;
-		variable field_start 					: integer range 0 to MAX_LINE - 1 := -1;
-		variable field_end 						: integer range 0 to MAX_LINE - 1 := -1;
-		variable blockfield_start 				: integer range 0 to MAX_LINE - 1 := -1;
-		variable blockfield_end 				: integer range 0 to MAX_LINE - 1 := -1;
-		variable last_univocal_blockfield_start : integer range 0 to MAX_LINE - 1 := -1;
-		variable last_univocal_blockfield_end 	: integer range 0 to MAX_LINE - 1 := -1;
-		variable last_univocal_constraint 		: integer range 0 to MAX_CLUE_LINE - 1 := -1;
+		variable field_start 					: integer range -1 to MAX_LINE - 1 := -1;
+		variable field_end 						: integer range -1 to MAX_LINE - 1 := -1;
+		variable blockfield_start 				: integer range -1 to MAX_LINE - 1 := -1;
+		variable blockfield_end 				: integer range -1 to MAX_LINE - 1 := -1;
+		variable last_univocal_blockfield_start : integer range -1 to MAX_LINE - 1 := -1;
+		variable last_univocal_blockfield_end 	: integer range -1 to MAX_LINE - 1 := -1;
+		variable last_univocal_constraint 		: integer range -1 to MAX_CLUE_LINE - 1 := -1;
 		variable last_univocal 					: boolean := true;
 		variable constraint_counter 			: integer range 0 to MAX_CLUE_LINE - 1 := 0;
 		variable current_constraint 			: integer range 0 to MAX_CLUE_LINE - 1 := 0;
@@ -449,9 +449,9 @@ architecture RTL of game_controller is
 	
 	procedure analysis_forward is
 		variable tmp_constraint_line 			: constraint_line_type;
-		variable last_constraint_min_start		: integer range 0 to MAX_LINE - 1;
-		variable last_constraint_max_end 		: integer range 0 to MAX_LINE - 1 := -1;
-		variable last_constraint_size 			: integer range -1 to MAX_LINE;
+		variable last_constraint_min_start		: integer range -1 to MAX_LINE - 1;
+		variable last_constraint_max_end 		: integer range -1 to MAX_LINE - 1 := -1;
+		variable last_constraint_size 			: integer range 0 to MAX_LINE;
 	begin
 		tmp_constraint_line := CONSTRAINT_OUTPUT_LINE;
 			

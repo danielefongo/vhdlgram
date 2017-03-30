@@ -1,176 +1,255 @@
+
 library ieee;
 use ieee.numeric_std.all;
 use ieee.std_logic_1164.all;
-use work.vga_package.all;
 
 package nonogram_package is
-	constant COLUMNS					:	positive	:= 10;
-	constant ROWS						:	positive	:= 10;
-	constant BOARD_SIZE				:	positive	:= 10; -- TODO: implement a MAX function here!
-	constant CLUES_ROWS				:	positive	:=	5; -- ceil(ROWS / 2)
-	constant CLUES_COLUMNS			: 	positive	:=	5; -- ceil(COLUMNS / 2)
-	constant CLUES_SIZE				: 	positive := 5; -- TODO: implement a MAX function here!
 
-	-- cells
-	type cell	is (FULL, EMPTY, UNDEFINED);
-	type cell_position is record
-		row	: integer range 0 to (ROWS - 1);	
-		col	: integer range 0 to (COLUMNS - 1);
-	end record;
+	--CONSTANTS
+	constant MAX_LINE					: integer := 5;
+	constant MAX_CLUE_LINE			: integer := 3; -- CEIL(MAX_LINE / 2)
 	
+	constant MAX_CLUE					: integer := 19;
+	constant MAX_LEVEL				: integer := 4;
+	constant MAX_ITERATION			: integer := 30;
+	constant W_PERIOD					: integer := 8;
+	
+	--TYPES
 	attribute enum_encoding	: string;
-	attribute enum_encoding of cell_position : type is "sequential"; -- sequential (binary) --> 00, 01, 10
 	
-	-- board
-	type board_array_type is array(natural range <>, natural range <>) of cell;
-	type board_type is record
-		cells	:	board_array_type(0 to (ROWS - 1), 0 to (COLUMNS - 1));
+	type status_type is (IDLE, LOAD, SOLVE_ITERATION, SOLVE_ALL, WON, LOST);
+	
+	--cells
+	type cell_type is (INVALID, UNDEFINED, EMPTY, FULL);
+	attribute enum_encoding of cell_type : type is "sequential";
+	
+	type cell_position_type is record
+		x				: integer range -1 to (MAX_LINE - 1); -- -1 for invalid cell position
+		y				: integer range -1 to (MAX_LINE - 1); -- -1 for invalid cell position
 	end record;
 	
-	-- clues
-	subtype clue is integer;
-	type clues_array_type is array(natural range <>, natural range <>) of integer range	0 to BOARD_SIZE; -- Be careful. Possible overflow here!!
-	type clues_board_type is record
-		rows	:	clues_array_type(0 to (ROWS - 1), 0 to (CLUES_COLUMNS - 1));
-		cols	: 	clues_array_type(0 to (COLUMNS - 1), 0 to (CLUES_ROWS - 1));
-	end record;
+	type cell_array_position_type is array(integer range <>) of cell_position_type;
 	
-	-- constraints
-	type constraint is record
-		size			:	integer; -- TODO: Think a more meaningful term.
-		min_start	:	integer;
-		max_end		: 	integer;
-	end record;
-	type constraints_array_type is array (natural range <>, natural range <>) of constraint;
-	type constraints_board_type is record
-		rows	:	constraints_array_type(0 to (ROWS - 1), 0 to (CLUES_COLUMNS - 1));
-		cols	:	constraints_array_type(0 to (COLUMNS - 1), 0 to (CLUES_ROWS - 1));
-	end record;
+	--board
+	type board_type is array(integer range 0 to MAX_LINE - 1, integer range 0 to MAX_LINE - 1) of cell_type;
 	
-	-- queries
-	type line_enum is (ROW, COL);
+	--lines
+	type line_type is array(0 to (MAX_LINE - 1)) of cell_type;
 	
-	type line_query is record
-		index			:	integer range 0 to BOARD_SIZE; -- Be careful. Possible overflow here!!
-		line_type	: 	line_enum;
-	end record;
-	
-	type clues_query is record
-		index			: 	integer range 0 to BOARD_SIZE; -- Be careful. Possible overflow here!!
-		line_type	: 	line_enum;
-	end record;
-	
-	type constraints_query is record
-		index			: 	integer range 0 to BOARD_SIZE; -- Be careful. Possible overflow here!!
-		line_type	: 	line_enum;
-	end record;
-	
-	-- clues definition
-	constant INPUT_CLUES	:	clues_board_type :=
-	(
-		rows	=> ((5,0,0,0,0), (4,2,0,0,0), (3,4,0,0,0), (1,4,2,0,0), (7,0,0,0,0), (1,1,0,0,0), (1,1,0,0,0), (1,1,0,0,0), (1,1,0,0,0), (10,0,0,0,0)),
-		cols	=> ((1,0,0,0,0), (2,1,0,0,0), (2,1,1,0,0), (5,2,1,0,0), (2,3,2,0,0), (5,1,0,0,0), (1,4,2,0,0), (3,1,2,1,0), (4,1,0,0,0), (1,1,0,0,0))
-	);
-	
---===== VIRTUAL DEFINITIONS =======================================================================================================================================
-	
-	-- lines
-	type line_type is array(0 to (BOARD_SIZE - 1)) of cell; -- Be careful. Possible overflow here!!
-	type clues_type is array(0 to (CLUES_SIZE - 1)) of clue; -- Be careful. Possible overflow here!!
-	type constraints_type is array(0 to (CLUES_SIZE - 1)) of constraint; -- Be careful. Possible overflow here!!
-		
---===== FUNCTION DEFINITIONS =======================================================================================================================================
+	--clues
+	subtype clue_type is integer range -1 to MAX_CLUE; -- -1 for invalid clue
+	type clue_matrix_type is array(integer range <>, integer range <>, integer range <>) of clue_type; 
 
-	function get_line(board: board_type; query: line_query) return line_type;
-	function get_clues(clues: clues_board_type; query: clues_query) return clues_type;
-	function get_constraints(constraints: constraints_board_type; query: constraints_query) return constraints_type;
-	function get_constraints_length(constraints: constraints_type) return integer;
-	function init_constraints(clues: clues_board_type) return constraints_board_type;
+	--constraints
+	type constraint_type is record
+		size				: integer range -1 to MAX_CLUE;
+		min_start		: integer range 0 to MAX_LINE - 1;
+		max_end			: integer range 0 to MAX_LINE - 1;
+	end record;
+	type constraint_line_type is array(integer range 0 to MAX_CLUE_LINE - 1) of constraint_type;
+	type constraint_matrix_type is array(integer range 0 to 1, integer range 0 to MAX_LINE - 1, integer range 0 to MAX_CLUE_LINE) of constraint_type;
 	
+	--levels
+	type dim_type is array(integer range <>) of integer range 0 to MAX_LINE - 1;
+	type level_type is record
+		dim				: 	dim_type(0 to 1); --Be careful. Max real dimension is 30x40.
+		clues				:	clue_matrix_type(0 to 1, 0 to MAX_LINE - 1, 0 to MAX_CLUE_LINE - 1);
+		full_cells		:	cell_array_position_type(0 to MAX_LINE * MAX_LINE - 1);
+		empty_cells		:	cell_array_position_type(0 to MAX_LINE * MAX_LINE - 1);
+	end record;
+	type level_array_type is array(integer range 0 to MAX_LEVEL - 1) of level_type;
+	
+	--queries
+	type query_type is record
+		transposed		:	integer range 0 to 1;
+		index				: 	integer range -1 to MAX_LINE - 1;
+	end record;
+	
+	--FUNCTIONS
+	function load_board_row(level : integer range -1 to MAX_LEVEl - 1; index : integer range 0 to MAX_LINE - 1) return line_type;
+	function load_constraint_line(level : integer range 0 to MAX_LEVEL - 1; transposed : integer range 0 to 1; index : integer range 0 to MAX_LINE - 1) return constraint_line_type;
+	
+	--CONSTANTS
+	constant EMPTY_LEVEL : level_type :=
+	(
+		dim 				=> (0,0),
+		clues				=> 
+		(
+			(others => (others => -1)),
+			(others => (others => -1))
+		),
+		full_cells		=>
+		(
+			others => (-1, -1)
+		),
+		empty_cells		=>
+		(
+			others => (-1, -1)
+		)
+	);
+
+	constant LEVEL_INPUT : level_array_type :=
+	(
+		(
+			dim 				=> (5,4),
+			clues				=> 
+			(
+				(
+					(5, others => -1),
+					(1,1, others => -1),
+					(1,1, others => -1),
+					(1,1, others => -1),
+					others => (others => -1)
+				),
+				(
+					(1, others => -1),
+					(4, others => -1),
+					(1, others => -1),
+					(4, others => -1),
+					(1, others => -1),
+					others => (others => -1)
+				)
+			),
+			full_cells		=>
+			(
+				others => (-1, -1)
+			),
+			empty_cells		=>
+			(
+				others => (-1, -1)
+			)
+		),
+		(
+			dim 				=> (3,3),
+			clues				=> 
+			(
+				(
+					(1,1, others => -1),
+					(1, others => -1),
+					(1,1, others => -1),
+					others => (others => -1)
+				),
+				(
+					(1,1, others => -1),
+					(1, others => -1),
+					(1,1, others => -1),
+					others => (others => -1)
+				)
+			),
+			full_cells		=>
+			(
+				(0,0),
+				others => (-1, -1)
+			),
+			empty_cells		=>
+			(
+				(1,2),
+				others => (-1, -1)
+			)
+		),/*
+		(
+			dim 				=> (9,10),
+			clues				=> 
+			(
+				(
+					(1,1, others => -1),
+					(3,3, others => -1),
+					(1,1,1, others => -1),
+					(1,1, others => -1),
+					(1,1, others => -1),
+					(1,1, others => -1),
+					(1,1, others => -1),
+					(1,1, others => -1),
+					(3, others => -1),
+					(1, others => -1),
+					others => (others => -1)
+				),
+				(
+					(4, others => -1),
+					(1,1, others => -1),
+					(2,1, others => -1),
+					(1,1, others => -1),
+					(1,2, others => -1),
+					(1,1, others => -1),
+					(2,1, others => -1),
+					(1,1, others => -1),
+					(4, others => -1),
+					others => (others => -1)
+				)
+			),
+			full_cells		=>
+			(
+				others => (-1, -1)
+			),
+			empty_cells		=>
+			(
+				others => (-1, -1)
+			)
+		),*/
+		others => EMPTY_LEVEL
+	);
 	
 end package;
 
 package body nonogram_package is
 	
-	function get_line(board: board_type; query: line_query) return line_type is
-		variable result : line_type;
+	--FUNCTIONS
+	function load_board_row(level : integer range -1 to MAX_LEVEl - 1; index : integer range 0 to MAX_LINE - 1) return line_type is
+		variable result : line_type := (others => INVALID);
 	begin
-		case (query.line_type) is
-			when ROW =>
-				for i in 0 to (ROWS - 1) loop
-					result(i) := board.cells(i, query.index);
-				end loop;
-			when COL =>
-				for i in 0 to (COLUMNS - 1) loop
-					result(i) := board.cells(query.index, i);
-				end loop;
-		end case;
-		return result;
-	end;
-	
-	function get_clues(clues: clues_board_type; query: clues_query) return clues_type is
-		variable result : clues_type;
-	begin
-  		case (query.line_type) is
-  			when ROW =>
-  				for i in 0 to (CLUES_ROWS - 1) loop
-					result(i) := clues.rows(query.index, i);
-				end loop;
-  			when COL =>
-  				for i in 0 to (CLUES_COLUMNS - 1) loop
-					result(i) := clues.cols(query.index, i);
-				end loop;
-  		end case;
-  		return result;
-	end;
-	
-	function get_constraints(constraints: constraints_board_type; query: constraints_query) return constraints_type is
-		variable result : constraints_type;
-	begin
-		case (query.line_type) is
-			when ROW =>
-				for i in 0 to (CLUES_ROWS - 1) loop
-					result(i) := constraints.rows(query.index, i);
-				end loop;
-			when COL =>
-				for i in 0 to (CLUES_COLUMNS - 1) loop
-					result(i) := constraints.cols(query.index, i);
-				end loop;
-		end case;
-		return result;
-	end;
-	
-	function get_constraints_length(constraints: constraints_type) return integer is
-		variable result : integer := 0;
-	begin
-		for i in constraints'range loop
-			if constraints(i).size > 0 then
-				result := result + 1;
-			else
-				return result;
-			end if;
-		end loop;
-	end;
-	
-	function init_constraints(clues: clues_board_type) return constraints_board_type is
-		variable result	: constraints_board_type;
-	begin
-		for i in 0 to (ROWS - 1) loop
-			for j in 0 to (CLUES_COLUMNS - 1) loop
-				result.rows(i, j).size := clues.rows(i, j);
-				result.rows(i, j).min_start := 0;
-				result.rows(i, j).max_end	:= COLUMNS - 1;
+		if(level > -1 and index < LEVEL_INPUT(level).dim(1)) then
+			for i in 0 to MAX_LINE - 1 loop
+				if(i < LEVEL_INPUT(level).dim(0)) then 
+					result(i) := UNDEFINED;
+				end if;
 			end loop;
-		end loop;
-		for i in 0 to (COLUMNS - 1) loop
-			for j in 0 to (CLUES_ROWS - 1) loop
-				result.cols(i, j).size := clues.cols(i, j);
-				result.cols(i, j).min_start := 0;
-				result.cols(i, j).max_end	:= ROWS - 1;
+			
+			for i in 0 to MAX_LINE * MAX_LINE - 1 loop
+				if(LEVEL_INPUT(level).empty_cells(i).x /= -1 and LEVEL_INPUT(level).empty_cells(i).y = index) then
+					result(LEVEL_INPUT(level).empty_cells(i).x) := EMPTY;
+				end if;
 			end loop;
-		end loop;
+			
+			for i in 0 to MAX_LINE * MAX_LINE - 1 loop
+				if(LEVEL_INPUT(level).full_cells(i).x /= -1 and LEVEL_INPUT(level).full_cells(i).y = index) then
+					result(LEVEL_INPUT(level).full_cells(i).x) := FULL;
+				end if;
+			end loop;
+		end if;	
+		return result;
+	end function;
+	
+	function load_constraint_line(level : integer range 0 to MAX_LEVEL - 1; transposed : integer range 0 to 1; index : integer range 0 to MAX_LINE - 1) return constraint_line_type is
+		variable result : constraint_line_type := (others => (-1,0,0));
+		variable left_clues_sum : integer := 0;
+		variable right_clues_sum : integer := 0;
+	begin
 		
+		if(index < LEVEL_INPUT(level).dim(1 - transposed)) then
+			
+			/*
+			left_clues_sum := 0;
+			right_clues_sum := 0;
+			
+			for i in 0 to MAX_CLUE_LINE -1 loop
+			if(LEVEL_INPUT(level).clues(transposed, index, i) /= -1) then
+				right_clues_sum := right_clues_sum + LEVEL_INPUT(level).clues(transposed, index, i) + 1;
+			end if;
+			end loop;
+			*/	
+			for i in 0 to MAX_CLUE_LINE -1 loop
+			if(LEVEL_INPUT(level).clues(transposed, index, i) /= -1) then
+				--right_clues_sum := right_clues_sum - LEVEL_INPUT(level).clues(transposed, index, i) - 1;
+				
+				result(i).size := LEVEL_INPUT(level).clues(transposed, index, i);
+				result(i).min_start := 0;--left_clues_sum;
+				result(i).max_end := LEVEL_INPUT(level).dim(transposed) - 1;-- - right_clues_sum;
+				
+				--left_clues_sum := left_clues_sum + LEVEL_INPUT(level).clues(transposed, index, i) + 1;
+			end if;
+			end loop;
+			
+		end if;
 		return result;
-	end;
-	
+	end function;
 end package body;

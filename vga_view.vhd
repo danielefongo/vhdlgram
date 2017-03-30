@@ -24,7 +24,7 @@ entity vga_view is
 		CONSTRAINT_LINE	: 	in constraint_line_type;
 		CONSTRAINT_QUERY	: 	out query_type;
 			
-		LEVEL					: 	in integer;
+		LEVEL					: 	in integer range -1 to MAX_LEVEL;
 		STATUS				:	in status_type
 	);
 	
@@ -54,10 +54,9 @@ begin
 		variable cell_y				: integer range 0 to CELL_SIZE - 1;
 		variable clue_x				: integer range 0 to MAX_LINE - 1 := 0;
 		variable clue_y				: integer range 0 to MAX_LINE - 1 := 0;
-		variable clue					: integer;
+		variable clue					: integer range -1 to MAX_CLUE;
 		
 	begin
-		
 		if(RESET_N = '0') then
 			old_x := 0;
 			old_y := 0;

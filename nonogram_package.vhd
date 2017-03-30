@@ -12,7 +12,7 @@ package nonogram_package is
 	constant MAX_CLUE					: integer := 19;
 	constant MAX_LEVEL				: integer := 4;
 	constant MAX_ITERATION			: integer := 30;
-	constant W_PERIOD					: integer := 8;
+	constant WR_PERIOD				: integer := 8;
 	
 	--TYPES
 	attribute enum_encoding	: string;
@@ -146,46 +146,7 @@ package nonogram_package is
 				(1,2),
 				others => (-1, -1)
 			)
-		),/*
-		(
-			dim 				=> (9,10),
-			clues				=> 
-			(
-				(
-					(1,1, others => -1),
-					(3,3, others => -1),
-					(1,1,1, others => -1),
-					(1,1, others => -1),
-					(1,1, others => -1),
-					(1,1, others => -1),
-					(1,1, others => -1),
-					(1,1, others => -1),
-					(3, others => -1),
-					(1, others => -1),
-					others => (others => -1)
-				),
-				(
-					(4, others => -1),
-					(1,1, others => -1),
-					(2,1, others => -1),
-					(1,1, others => -1),
-					(1,2, others => -1),
-					(1,1, others => -1),
-					(2,1, others => -1),
-					(1,1, others => -1),
-					(4, others => -1),
-					others => (others => -1)
-				)
-			),
-			full_cells		=>
-			(
-				others => (-1, -1)
-			),
-			empty_cells		=>
-			(
-				others => (-1, -1)
-			)
-		),*/
+		),
 		others => EMPTY_LEVEL
 	);
 	

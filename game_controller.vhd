@@ -40,7 +40,7 @@ architecture RTL of game_controller is
 	signal index_register					: integer range 0 to MAX_LINE := 0;
 	signal iteration_register 				: integer range 0 to MAX_ITERATION;
 	signal ack_register						: status_type := IDLE;
-	signal w_clock_divisor					: integer range 0 to W_PERIOD := 0;
+	signal clock_divisor						: integer range 0 to WR_PERIOD := 0;
 	
 	--PROCEDURES
 	procedure load_procedure is
@@ -48,7 +48,7 @@ architecture RTL of game_controller is
 		if(LEVEL = -1) then
 			ack_register <= LOAD;
 		else
-			if(w_clock_divisor = 0) then
+			if(clock_divisor = 0) then
 				if(transposed_register = 0) then
 					BOARD_QUERY.index <= index_register;
 					BOARD_QUERY.transposed <= 0;
@@ -65,14 +65,14 @@ architecture RTL of game_controller is
 					CONSTRAINT_INPUT_LINE <= load_constraint_line(LEVEL, transposed_register, index_register);
 					CONSTRAINT_W_NOT_R <= '1';
 				end if;
-				w_clock_divisor <= w_clock_divisor + 1;
-			elsif(w_clock_divisor < W_PERIOD / 2) then
-				w_clock_divisor <= w_clock_divisor + 1;
-			elsif(w_clock_divisor < W_PERIOD) then
+				clock_divisor <= clock_divisor + 1;
+			elsif(clock_divisor < WR_PERIOD / 2) then
+				clock_divisor <= clock_divisor + 1;
+			elsif(clock_divisor < WR_PERIOD) then
 				BOARD_W_NOT_R <= '0';
-				w_clock_divisor <= w_clock_divisor + 1;
+				clock_divisor <= clock_divisor + 1;
 			else
-				w_clock_divisor <= 0;
+				clock_divisor <= 0;
 				BOARD_W_NOT_R <= '0';
 				CONSTRAINT_W_NOT_R <= '0';
 				if(transposed_register = 0) then
@@ -155,9 +155,9 @@ architecture RTL of game_controller is
 		variable tmp_constraint_line			: constraint_line_type;
 		variable available_size 				: integer range 0 to MAX_LINE := 0;
 		variable constraint_sum 				: integer range 0 to MAX_LINE := 0;
-		variable current_constraint 			: integer range 0 to MAX_CLUE_LINE := 0;
-		variable field_start 					: integer range -1 to MAX_LINE := -1;
-		variable field_end 						: integer range -1 to MAX_LINE := -1;
+		variable current_constraint 			: integer range 0 to MAX_CLUE_LINE - 1 := 0;
+		variable field_start 					: integer range -1 to MAX_LINE - 1 := -1;
+		variable field_end 						: integer range -1 to MAX_LINE - 1 := -1;
 		variable exit_analysis					: boolean := false;
 		variable exit_constraints 				: boolean := false;
 		variable block_found 					: boolean := false;
@@ -246,11 +246,11 @@ architecture RTL of game_controller is
 	procedure analyze_right is
 		variable tmp_board_line					: line_type;
 		variable tmp_constraint_line			: constraint_line_type;
-			variable available_size 			: integer range 0 to MAX_LINE := 0;
+		variable available_size 				: integer range 0 to MAX_LINE := 0;
 		variable constraint_sum 				: integer range 0 to MAX_LINE := 0;
-		variable current_constraint 			: integer range 0 to MAX_CLUE_LINE := 0;
-		variable field_start 					: integer range -1 to MAX_LINE := -1;
-		variable field_end 						: integer range -1 to MAX_LINE := -1;
+		variable current_constraint 			: integer range 0 to MAX_CLUE_LINE - 1 := 0;
+		variable field_start 					: integer range -1 to MAX_LINE - 1:= -1;
+		variable field_end 						: integer range -1 to MAX_LINE - 1:= -1;
 		variable exit_analysis					: boolean := false;
 		variable exit_constraints 				: boolean := false;
 		variable block_found 					: boolean := false;
@@ -350,7 +350,7 @@ architecture RTL of game_controller is
 		variable last_univocal_blockfield_end 	: integer range -1 to MAX_LINE - 1 := -1;
 		variable last_univocal_constraint 		: integer range -1 to MAX_CLUE_LINE - 1 := -1;
 		variable last_univocal 					: boolean := true;
-		variable constraint_counter 			: integer range 0 to MAX_CLUE_LINE - 1 := 0;
+		variable constraint_counter 			: integer range 0 to MAX_CLUE_LINE := 0;
 		variable current_constraint 			: integer range 0 to MAX_CLUE_LINE - 1 := 0;
 	begin
 		tmp_board_line := BOARD_OUTPUT_LINE;	
@@ -451,7 +451,7 @@ architecture RTL of game_controller is
 		variable tmp_constraint_line 			: constraint_line_type;
 		variable last_constraint_min_start		: integer range -1 to MAX_LINE - 1;
 		variable last_constraint_max_end 		: integer range -1 to MAX_LINE - 1 := -1;
-		variable last_constraint_size 			: integer range 0 to MAX_LINE;
+		variable last_constraint_size 			: integer range -1 to MAX_LINE;
 	begin
 		tmp_constraint_line := CONSTRAINT_OUTPUT_LINE;
 			
@@ -500,7 +500,7 @@ begin
 			ITERATION <= 0;
 			transposed_register <= 0;
 			index_register <= 0;
-			w_clock_divisor <= 0;
+			clock_divisor <= 0;
 			solver_status_register <= S_IDLE;
 			BOARD_W_NOT_R <= '0';
 			CONSTRAINT_W_NOT_R <= '0';
@@ -509,7 +509,7 @@ begin
 				when IDLE =>
 					transposed_register <= 0;
 					index_register <= 0;
-					w_clock_divisor <= 0;
+					clock_divisor <= 0;
 					solver_status_register <= S_IDLE;
 					BOARD_W_NOT_R <= '0';
 					CONSTRAINT_W_NOT_R <= '0';
@@ -533,114 +533,114 @@ begin
 							solver_status_register <= S_SYNCRONIZE;
 						
 						when S_SYNCRONIZE =>
-							if(w_clock_divisor < W_PERIOD - 1) then
+							if(clock_divisor < WR_PERIOD - 1) then
 								BOARD_W_NOT_R <= '0';
 								CONSTRAINT_W_NOT_R <= '0';
-								w_clock_divisor <= w_clock_divisor + 1;
+								clock_divisor <= clock_divisor + 1;
 							else
-								w_clock_divisor <= 0;
+								clock_divisor <= 0;
 								solver_status_register <= S_ANALYZING_LEFT;
 							end if;
 						
 						when S_ANALYZING_LEFT =>
-							if(w_clock_divisor = 0) then
+							if(clock_divisor = 0) then
 			
 								analyze_left;
 			
-								w_clock_divisor <= w_clock_divisor + 1;
-							elsif(w_clock_divisor < W_PERIOD / 2) then
-								w_clock_divisor <= w_clock_divisor + 1;
-							elsif(w_clock_divisor < W_PERIOD) then
+								clock_divisor <= clock_divisor + 1;
+							elsif(clock_divisor < WR_PERIOD / 2) then
+								clock_divisor <= clock_divisor + 1;
+							elsif(clock_divisor < WR_PERIOD) then
 								CONSTRAINT_W_NOT_R <= '0';
-								w_clock_divisor <= w_clock_divisor + 1;
+								clock_divisor <= clock_divisor + 1;
 							else
 								CONSTRAINT_W_NOT_R <= '0';
-								w_clock_divisor <= 0;
+								clock_divisor <= 0;
 								solver_status_register <= S_ANALYZING_RIGHT;
 							end if;
 							
 						when S_ANALYZING_RIGHT =>
-							if(w_clock_divisor = 0) then
+							if(clock_divisor = 0) then
 			
 								analyze_right;
 
-								w_clock_divisor <= w_clock_divisor + 1;
-							elsif(w_clock_divisor < W_PERIOD / 2) then
-								w_clock_divisor <= w_clock_divisor + 1;
-							elsif(w_clock_divisor < W_PERIOD) then
+								clock_divisor <= clock_divisor + 1;
+							elsif(clock_divisor < WR_PERIOD / 2) then
+								clock_divisor <= clock_divisor + 1;
+							elsif(clock_divisor < WR_PERIOD) then
 								CONSTRAINT_W_NOT_R <= '0';
-								w_clock_divisor <= w_clock_divisor + 1;
+								clock_divisor <= clock_divisor + 1;
 							else
 								CONSTRAINT_W_NOT_R <= '0';
-								w_clock_divisor <= 0;
+								clock_divisor <= 0;
 								solver_status_register <= S_ANALYZING_BLOCKS;
 							end if;
 							
 						when S_ANALYZING_BLOCKS =>
-							if(w_clock_divisor = 0) then
+							if(clock_divisor = 0) then
 								
 								analyze_blocks;
 
-								w_clock_divisor <= w_clock_divisor + 1;
-							elsif(w_clock_divisor < W_PERIOD / 2) then
-								w_clock_divisor <= w_clock_divisor + 1;
-							elsif(w_clock_divisor < W_PERIOD) then
+								clock_divisor <= clock_divisor + 1;
+							elsif(clock_divisor < WR_PERIOD / 2) then
+								clock_divisor <= clock_divisor + 1;
+							elsif(clock_divisor < WR_PERIOD) then
 								CONSTRAINT_W_NOT_R <= '0';
-								w_clock_divisor <= w_clock_divisor + 1;
+								clock_divisor <= clock_divisor + 1;
 							else
 								CONSTRAINT_W_NOT_R <= '0';
-								w_clock_divisor <= 0;
+								clock_divisor <= 0;
 								solver_status_register <= S_ANALYSIS_FORWARD;
 							end if;
 						
 						when S_ANALYSIS_FORWARD =>
-							if(w_clock_divisor = 0) then
+							if(clock_divisor = 0) then
 			
 								analysis_forward;
 
-								w_clock_divisor <= w_clock_divisor + 1;
-							elsif(w_clock_divisor < W_PERIOD / 2) then
-								w_clock_divisor <= w_clock_divisor + 1;
-							elsif(w_clock_divisor < W_PERIOD) then
+								clock_divisor <= clock_divisor + 1;
+							elsif(clock_divisor < WR_PERIOD / 2) then
+								clock_divisor <= clock_divisor + 1;
+							elsif(clock_divisor < WR_PERIOD) then
 								CONSTRAINT_W_NOT_R <= '0';
-								w_clock_divisor <= w_clock_divisor + 1;
+								clock_divisor <= clock_divisor + 1;
 							else
 								CONSTRAINT_W_NOT_R <= '0';
-								w_clock_divisor <= 0;
+								clock_divisor <= 0;
 								solver_status_register <= S_SIMPLE_BLOCKS;
 							end if;
 						
 						when S_SIMPLE_BLOCKS =>
-							if(w_clock_divisor = 0) then
+							if(clock_divisor = 0) then
 								
 								simple_blocks;
 								
-								w_clock_divisor <= w_clock_divisor + 1;
-							elsif(w_clock_divisor < W_PERIOD / 2) then
-								w_clock_divisor <= w_clock_divisor + 1;
-							elsif(w_clock_divisor < W_PERIOD) then
+								clock_divisor <= clock_divisor + 1;
+							elsif(clock_divisor < WR_PERIOD / 2) then
+								clock_divisor <= clock_divisor + 1;
+							elsif(clock_divisor < WR_PERIOD) then
 								BOARD_W_NOT_R <= '0';
-								w_clock_divisor <= w_clock_divisor + 1;
+								clock_divisor <= clock_divisor + 1;
 							else
 								BOARD_W_NOT_R <= '0';
-								w_clock_divisor <= 0;
+								clock_divisor <= 0;
 								solver_status_register <= S_SIMPLE_SPACES;
 							end if;
 							
 						when S_SIMPLE_SPACES =>
-							if(w_clock_divisor = 0) then
+							if(clock_divisor = 0) then
 								
 								simple_spaces;
 								
-								w_clock_divisor <= w_clock_divisor + 1;
-							elsif(w_clock_divisor < W_PERIOD / 2) then
-								w_clock_divisor <= w_clock_divisor + 1;
-							elsif(w_clock_divisor < W_PERIOD) then
+								clock_divisor <= clock_divisor + 1;
+							elsif(clock_divisor < WR_PERIOD / 2) then
+								clock_divisor <= clock_divisor + 1;
+							elsif(clock_divisor < WR_PERIOD) then
 								BOARD_W_NOT_R <= '0';
-								w_clock_divisor <= w_clock_divisor + 1;
+								clock_divisor <= clock_divisor + 1;
 							else
 								BOARD_W_NOT_R <= '0';
-								w_clock_divisor <= 0;
+								clock_divisor <= 0;
 								solver_status_register <= S_FINALIZING;
 							end if;
 							

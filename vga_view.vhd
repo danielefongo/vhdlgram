@@ -5,8 +5,8 @@ use work.vga_package.all;
 use work.nonogram_package.all;
 
 entity vga_view is
-	
-	port 
+
+	port
 	(
 		CLOCK					: 	in std_logic;
 		RESET_N				: 	in std_logic;
@@ -17,17 +17,17 @@ entity vga_view is
 		VGA_B					: 	out std_logic_vector(7 downto 0);
 		VGA_BLANK_N			: 	out std_logic;
 		VGA_SYNC_N			: 	out std_logic;
-		
+
 		ROW_DESCRIPTION	:	in	line_type;
 		QUERY					: 	out query_type;
-		
+
 		CONSTRAINT_LINE	: 	in constraint_line_type;
 		CONSTRAINT_QUERY	: 	out query_type;
-			
+
 		LEVEL					: 	in integer range -1 to MAX_LEVEL;
 		STATUS				:	in status_type
 	);
-	
+
 end;
 
 architecture RTL of vga_view is
@@ -41,7 +41,7 @@ architecture RTL of vga_view is
 	end send_color;
 
 begin
-		
+
 	--PROCESSES
 	draw : process(CLOCK, RESET_N)
 		variable old_x					: integer range 0 to TOTAL_W := 0;
@@ -55,7 +55,7 @@ begin
 		variable clue_x				: integer range 0 to MAX_LINE - 1 := 0;
 		variable clue_y				: integer range 0 to MAX_LINE - 1 := 0;
 		variable clue					: integer range -1 to MAX_CLUE;
-		
+
 	begin
 		if(RESET_N = '0') then
 			old_x := 0;
@@ -70,45 +70,45 @@ begin
 			VGA_BLANK_N <= '0';
 			send_color(BLACK);
 		elsif rising_edge(CLOCK) then
-			
+
 			VGA_BLANK_N <= '1';
 			VGA_SYNC_N <= '0';
-			
+
 			--vertical sync
-			if (old_y < VERTICAL_SYNC_PULSE) then 
+			if (old_y < VERTICAL_SYNC_PULSE) then
 				VGA_VS <= '0';
 			else
 				VGA_VS <= '1';
 			end if;
-			
+
 			--horizontal sync
-			if (old_x < HORIZONTAL_SYNC_PULSE) then 
+			if (old_x < HORIZONTAL_SYNC_PULSE) then
 				VGA_HS <= '0';
 			else
 				VGA_HS <= '1';
 			end if;
-			
+
 			--invalid level
 			if(level < 0) then
 				send_color(BLACK);
 			else --valid level
 				rows := LEVEL_INPUT(level).dim(1);
 				columns := LEVEL_INPUT(level).dim(0);
-				
+
 				--inside the visible window
 				if(old_x >= WINDOW_HORIZONTAL_START and old_x < WINDOW_HORIZONTAL_END and old_y >= WINDOW_VERTICAL_START and old_y < WINDOW_VERTICAL_END) then
 					x := old_x - WINDOW_HORIZONTAL_START;
 					y := old_y - WINDOW_VERTICAL_START;
-					
+
 					--draw window
 					if(x >= PADDING and x < VISIBLE_WIDTH - PADDING and y >= PADDING and y < VISIBLE_HEIGHT - PADDING) then
-						
+
 						--draw table
 						if(x - PADDING < CELL_SIZE * columns + LINE_WIDTH and y - PADDING < CELL_SIZE * rows + LINE_WIDTH) then
-							
+
 							cell_x := (x - PADDING) mod CELL_SIZE;
 							cell_y := (y - PADDING) mod CELL_SIZE;
-							
+
 							if(cell_x < LINE_WIDTH or cell_y < LINE_WIDTH) then
 								send_color(LINE_COLOR);
 							else
@@ -124,39 +124,87 @@ begin
 								end case;
 							end if;
 						else --not draw table
-						
-							--right side of the table			
+
+							--right side of the table
 							if(x > 2 * PADDING + CELL_SIZE * columns and x <= 2 * PADDING + CELL_SIZE * columns + CELL_SIZE * MAX_CLUE_LINE and y < PADDING + CELL_SIZE * rows) then
-								
+
 								clue_x := (x - 2 * PADDING - CELL_SIZE * columns) / CELL_SIZE;
 								clue := CONSTRAINT_LINE(clue_x).size;
-								
+
 								cell_x := (x - 2 * PADDING - CELL_SIZE * columns) mod CELL_SIZE;
 								cell_y := (y - PADDING) mod CELL_SIZE;
-								
+
 								if(clue > -1 and cell_x >= LINE_WIDTH and cell_y >= LINE_WIDTH and draw_number(clue, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
 									send_color(NUMBER_COLOR);
 								else
 									send_color(BLACK);
 								end if;
-								
+
 							--bottom side of the table
 							elsif(y > 2 * PADDING + CELL_SIZE * rows and y <= 2 * PADDING + CELL_SIZE * rows + CELL_SIZE * MAX_CLUE_LINE and x < PADDING + CELL_SIZE * columns) then
-								
+
 								clue_y := (y - 2 * PADDING - CELL_SIZE * rows) / CELL_SIZE;
 								clue := CONSTRAINT_LINE(clue_y).size;
-								
+
 								cell_x := (x - PADDING) mod CELL_SIZE;
 								cell_y := (y - 2 * PADDING - CELL_SIZE * rows) mod CELL_SIZE;
-								
+
 								if(clue > -1 and cell_x >= LINE_WIDTH and cell_y >= LINE_WIDTH and draw_number(clue, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
 									send_color(NUMBER_COLOR);
 								else
 									send_color(BLACK);
 								end if;
-							
-							--TODO: elsif show_status
-							
+
+							--show status and level
+							elsif(y > 2 * PADDING + CELL_SIZE * rows and x > 2 * PADDING + CELL_SIZE * columns) then
+
+								--variable usage optimization
+								clue_x := (x - 2 * PADDING - CELL_SIZE * columns) / CELL_SIZE;
+								clue_y := (y - 2 * PADDING - CELL_SIZE * rows) / CELL_SIZE;
+
+								cell_x := (x - 2 * PADDING - CELL_SIZE * columns) mod CELL_SIZE;
+								cell_y := (y - 2 * PADDING - CELL_SIZE * rows) mod CELL_SIZE;
+
+								if(cell_x >= LINE_WIDTH and cell_y >= LINE_WIDTH) then
+									if(clue_y = 1) then
+										if((clue_x = 1 or clue_x = 5) and draw_char(VGA_L, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
+											send_color(TEAL);
+										elsif((clue_x = 2 or clue_x = 4) and draw_char(VGA_E, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
+											send_color(TEAL);
+										elsif(clue_x = 3 and draw_char(VGA_V, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
+											send_color(TEAL);
+										elsif(clue_x = 7 and draw_number(LEVEL, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
+											send_color(TEAL);
+										else
+											send_color(BLACK);
+										end if;
+									elsif(clue_y = 3 and STATUS = WON) then
+										if(clue_x = 1 and draw_char(VGA_W, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
+											send_color(GREEN);
+										elsif(clue_x = 2 and draw_char(VGA_O, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
+											send_color(GREEN);
+										elsif(clue_x = 3 and draw_char(VGA_N, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
+											send_color(GREEN);
+										else
+											send_color(BLACK);
+										end if;
+									elsif(clue_y = 3 and STATUS = LOST) then
+										if(clue_x = 1 and draw_char(VGA_L, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
+											send_color(RED);
+										elsif(clue_x = 2 and draw_char(VGA_O, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
+											send_color(RED);
+										elsif(clue_x = 3 and draw_char(VGA_S, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
+											send_color(RED);
+										elsif(clue_x = 4 and draw_char(VGA_T, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
+											send_color(RED);
+										else
+											send_color(BLACK);
+										end if;
+									else
+										send_color(BLACK);
+									end if;
+								end if;
+
 							else --rest of the window
 								send_color(BLACK);
 							end if;
@@ -165,12 +213,12 @@ begin
 				else --outside visible screen
 					send_color(BLACK);
 				end if;
-				
+
 			end if;
-			
+
 			--update coordinates
-			if(old_x = TOTAL_W - 1) then			
-				if(old_y = TOTAL_H - 1) then 
+			if(old_x = TOTAL_W - 1) then
+				if(old_y = TOTAL_H - 1) then
 					old_y := 0;
 				else
 					old_y := old_y + 1;
@@ -179,21 +227,21 @@ begin
 			else
 				old_x := old_x + 1;
 			end if;
-			
+
 			QUERY.transposed <= 0;
 			if((y - PADDING) / CELL_SIZE < MAX_LINE) then
 				QUERY.index <= (y - PADDING) / CELL_SIZE;
 			end if;
-			
+
 			if(x > 2 * PADDING + CELL_SIZE * columns and x <= 2 * PADDING + CELL_SIZE * columns + CELL_SIZE * MAX_CLUE_LINE and y > PADDING and y < PADDING + CELL_SIZE * rows) then
 				CONSTRAINT_QUERY.transposed <= 0;
 				CONSTRAINT_QUERY.index <= (y - PADDING) / CELL_SIZE;
 			elsif(y > 2 * PADDING + CELL_SIZE * rows and y <= 2 * PADDING + CELL_SIZE * rows + CELL_SIZE * MAX_CLUE_LINE and x < PADDING + CELL_SIZE * columns) then
 				CONSTRAINT_QUERY.transposed <= 1;
 				CONSTRAINT_QUERY.index <= (x - PADDING) / CELL_SIZE;
-			end if;	
-			
+			end if;
+
 		end if;
 	end process;
-	
+
 end architecture;

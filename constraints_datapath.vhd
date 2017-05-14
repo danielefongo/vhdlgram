@@ -23,11 +23,12 @@ end constraints_datapath;
 
 architecture RTL of constraints_datapath is
 
+	--SIGNALS
 	signal constraints 						: constraint_matrix_type := (others => (others => (others => (-1, 0, 0))));
 	
 begin
 	
-	--processes
+	--PROCESSES
 	query_process : process(CLOCK, RESET_N)
 	begin
 		if(RESET_N = '0') then

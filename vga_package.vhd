@@ -5,7 +5,7 @@ use ieee.std_logic_1164.all;
 package vga_package is
 
 	--TYPES
-	subtype color_type is std_logic_vector(0 to 23);
+	subtype color_type is std_logic_vector(0 to 11);
 
 	type vga_char is (VGA_L, VGA_E, VGA_V, VGA_W, VGA_O, VGA_N, VGA_S, VGA_T, VGA_I, VGA_R, VGA_A);
 	attribute enum_encoding of vga_char : type is "sequential";
@@ -40,14 +40,14 @@ package vga_package is
 	constant PADDING			:	integer		:= CELL_SIZE * 2;
 
 	--colors
-	constant BLACK				: 	color_type 	:= X"000000";
-	constant WHITE				: 	color_type 	:= X"FFFFFF";
-	constant RED				: 	color_type 	:= X"FF0000";
-	constant GREEN				: 	color_type 	:= X"00FF00";
-	constant BLUE				: 	color_type 	:= X"0000FF";
-	constant VIOLET			:	color_type	:= X"FF00FF";
-	constant YELLOW			:	color_type	:= X"FFFF00";
-	constant TEAL				:	color_type	:= X"008888";
+	constant BLACK				: 	color_type 	:= X"000";
+	constant WHITE				: 	color_type 	:= X"FFF";
+	constant RED				: 	color_type 	:= X"F00";
+	constant GREEN				: 	color_type 	:= X"0F0";
+	constant BLUE				: 	color_type 	:= X"00F";
+	constant VIOLET			:	color_type	:= X"F0F";
+	constant YELLOW			:	color_type	:= X"FF0";
+	constant TEAL				:	color_type	:= X"088";
 
 	constant LINE_COLOR		:	color_type 	:= WHITE;
 	constant INVALID_COLOR	:	color_type	:= RED;

@@ -12,11 +12,11 @@ entity vga_view is
 		RESET_N				: 	in std_logic;
 		VGA_HS				: 	out std_logic;
 		VGA_VS				: 	out std_logic;
-		VGA_R					: 	out std_logic_vector(7 downto 0);
-		VGA_G					: 	out std_logic_vector(7 downto 0);
-		VGA_B					: 	out std_logic_vector(7 downto 0);
-		VGA_BLANK_N			: 	out std_logic;
-		VGA_SYNC_N			: 	out std_logic;
+		VGA_R					: 	out std_logic_vector(3 downto 0);
+		VGA_G					: 	out std_logic_vector(3 downto 0);
+		VGA_B					: 	out std_logic_vector(3 downto 0);
+		--VGA_BLANK_N			: 	out std_logic;
+		--VGA_SYNC_N			: 	out std_logic;
 
 		ROW_DESCRIPTION	:	in	line_type;
 		QUERY					: 	out query_type;
@@ -36,9 +36,9 @@ architecture RTL of vga_view is
 	--PROCEDURES
 	procedure send_color ( color : color_type ) is
 	begin
-		VGA_R <= color(0 to 7);
-		VGA_G <= color(8 to 15);
-		VGA_B <= color(16 to 23);
+		VGA_R <= color(0 to 3);
+		VGA_G <= color(4 to 7);
+		VGA_B <= color(8 to 11);
 	end send_color;
 
 begin
@@ -67,13 +67,13 @@ begin
 			CONSTRAINT_QUERY <= (0, -1);
 			VGA_HS <= '0';
 			VGA_VS <= '0';
-			VGA_SYNC_N <= '1';
-			VGA_BLANK_N <= '0';
+			--VGA_SYNC_N <= '1';
+			--VGA_BLANK_N <= '0';
 			send_color(BLACK);
 		elsif rising_edge(CLOCK) then
 
-			VGA_BLANK_N <= '1';
-			VGA_SYNC_N <= '0';
+			--VGA_BLANK_N <= '1';
+			--VGA_SYNC_N <= '0';
 
 			--vertical sync
 			if (old_y < VERTICAL_SYNC_PULSE) then

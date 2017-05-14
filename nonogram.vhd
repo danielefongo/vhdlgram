@@ -9,28 +9,28 @@ entity nonogram is
 	(
 		CLOCK_50            	: in  std_logic;
 
-		SW                  	: in  std_logic_vector(17 downto 0);
+		SW                  	: in  std_logic_vector(9 downto 0);
 
 		KEY                 	: in  std_logic_vector(3 downto 0);
 
-		VGA_R               	: out std_logic_vector(7 downto 0);
-		VGA_G               	: out std_logic_vector(7 downto 0);
-		VGA_B               	: out std_logic_vector(7 downto 0);
+		VGA_R               	: out std_logic_vector(3 downto 0);
+		VGA_G               	: out std_logic_vector(3 downto 0);
+		VGA_B               	: out std_logic_vector(3 downto 0);
 		VGA_HS              	: out std_logic;
 		VGA_VS              	: out std_logic;
-		VGA_SYNC_N				: out std_logic;
-		VGA_BLANK_N				: out std_logic;
-		VGA_CLK					: out std_logic;
+		--VGA_SYNC_N				: out std_logic;
+		--VGA_BLANK_N				: out std_logic;
+		--VGA_CLK					: out std_logic;
 
-		HEX7						: out std_logic_vector(6 downto 0);
-		HEX6						: out std_logic_vector(6 downto 0);
+		--HEX7						: out std_logic_vector(6 downto 0);
+		--HEX6						: out std_logic_vector(6 downto 0);
 		HEX3						: out std_logic_vector(6 downto 0);
 		HEX2						: out std_logic_vector(6 downto 0);
 		HEX1						: out std_logic_vector(6 downto 0);
 		HEX0						: out std_logic_vector(6 downto 0);
 
-		LEDG						: out std_logic_vector(8 downto 0);
-		LEDR						: out std_logic_vector(17 downto 0)
+		LEDG						: out std_logic_vector(7 downto 0);
+		LEDR						: out std_logic_vector(9 downto 0)
 	);
 
 end nonogram;
@@ -84,8 +84,8 @@ begin
 			VGA_B						=> VGA_B,
 			VGA_HS					=> VGA_HS,
 			VGA_VS					=> VGA_VS,
-			VGA_SYNC_N				=> VGA_SYNC_N,
-			VGA_BLANK_N				=> VGA_BLANK_N,
+			--VGA_SYNC_N				=> VGA_SYNC_N,
+			--VGA_BLANK_N				=> VGA_BLANK_N,
 
 			ROW_DESCRIPTION		=> view_board_line,
 			QUERY						=> view_board_query,
@@ -104,11 +104,11 @@ begin
 			CLOCK						=> vga_clock,
 			RESET_N					=> reset_n,
 
-			ITERATION				=> iteration,
+			--ITERATION				=> iteration,
 			UNDEFINED_CELLS		=> undefined_cells,
 
-			HEX7						=> HEX7,
-			HEX6						=> HEX6,
+			--HEX7						=> HEX7,
+			--HEX6						=> HEX6,
 			HEX3						=> HEX3,
 			HEX2						=> HEX2,
 			HEX1						=> HEX1,
@@ -122,7 +122,7 @@ begin
 			CLOCK						=> clock,
 			RESET_N					=> reset_n,
 
-			SW							=> SW(17 downto 1),
+			SW							=> SW(9 downto 1),
 			LEVEL						=> level,
 
 			ACK						=> ack,
@@ -207,21 +207,21 @@ begin
 	led_status_debug : process(clock, reset_n)
 	begin
 		if(reset_n = '0') then
-			LEDG <= "000000000";
+			LEDG <= "00000000";
 		elsif(rising_edge(clock)) then
 			case(status) is
 				when IDLE =>
-					LEDG <= "010000000";
+					LEDG <= "01000000";
 				when LOAD =>
-					LEDG <= "001000000";
+					LEDG <= "00100000";
 				when SOLVE_ITERATION =>
-					LEDG <= "000100000";
+					LEDG <= "00010000";
 				when SOLVE_ALL =>
-					LEDG <= "000010000";
+					LEDG <= "00001000";
 				when WON	=>
-					LEDG <= "000001000";
+					LEDG <= "00000100";
 				when LOST =>
-					LEDG <= "000000100";
+					LEDG <= "00000010";
 			end case;
 		end if;
 	end process;
@@ -234,19 +234,19 @@ begin
 			case(level) is
 				when -1 =>
 					LEDR(0) <= '1';
-					LEDR(17 downto 1) <= (others => '0');
+					LEDR(9 downto 1) <= (others => '0');
 				when 0 =>
-					LEDR(17) <= '1';
-					LEDR(16 downto 0) <= (others => '0');
+					LEDR(9) <= '1';
+					LEDR(8 downto 0) <= (others => '0');
 				when 1 =>
-					LEDR(17 downto 16) <= "01";
-					LEDR(15 downto 0) <= (others => '0');
+					LEDR(9 downto 8) <= "01";
+					LEDR(7 downto 0) <= (others => '0');
 				when 2 =>
-					LEDR(17 downto 15) <= "001";
-					LEDR(14 downto 0) <= (others => '0');
+					LEDR(9 downto 7) <= "001";
+					LEDR(6 downto 0) <= (others => '0');
 				when 3 =>
-					LEDR(17 downto 14) <= "0001";
-					LEDR(13 downto 0) <= (others => '0');
+					LEDR(9 downto 6) <= "0001";
+					LEDR(5 downto 0) <= (others => '0');
 			end case;
 		end if;
 	end process;

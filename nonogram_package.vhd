@@ -277,10 +277,12 @@ package nonogram_package is
 			),
 			full_cells		=>
 			(
+				(0,0),
 				others => (-1, -1)
 			),
 			empty_cells		=>
 			(
+				(3,6),
 				others => (-1, -1)
 			)
 		),
@@ -313,6 +315,7 @@ package nonogram_package is
 			),
 			full_cells		=>
 			(
+				(6,6),
 				others => (-1, -1)
 			),
 			empty_cells		=>

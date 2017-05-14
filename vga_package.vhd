@@ -5,9 +5,10 @@ use ieee.std_logic_1164.all;
 package vga_package is
 
 	--TYPES
+	attribute enum_encoding	: string;
 	subtype color_type is std_logic_vector(0 to 11);
-
-	type vga_char is (VGA_L, VGA_E, VGA_V, VGA_W, VGA_O, VGA_N, VGA_S, VGA_T, VGA_I, VGA_R, VGA_A);
+	
+	type vga_char is (CHAR_L, CHAR_E, CHAR_V, CHAR_W, CHAR_O, CHAR_N, CHAR_S, CHAR_T, CHAR_I, CHAR_R, CHAR_A);
 	attribute enum_encoding of vga_char : type is "sequential";
 
 	--CONSTANTS
@@ -135,61 +136,61 @@ package body vga_package is
 
 	function draw_char( C : vga_char; pixel_x: integer range 0 to 6; pixel_y: integer range 0 to 6 ) return boolean is
 	begin
-		if(C = VGA_L and (
+		if(C = CHAR_L and (
 			(pixel_x = 1) or
-			(pixel_y = 6 and pixel_x /= 0 and pixel_x /= 6)) then
+			(pixel_y = 6 and pixel_x /= 0 and pixel_x /= 6))) then
 			return true;
-		elsif(C = VGA_E and (
+		elsif(C = CHAR_E and (
 			(pixel_x = 1) or
 			(pixel_y = 0 and pixel_x /= 0 and pixel_x /= 6) or
 			(pixel_y = 3 and pixel_x /= 0 and pixel_x < 4) or
 			(pixel_y = 6 and pixel_x /= 0 and pixel_x /= 6))) then
 			return true;
-		elsif(C = VGA_V and (
+		elsif(C = CHAR_V and (
 			(pixel_y < 2 and (pixel_x = 0 or pixel_x = 6)) or
 			(pixel_y > 1 and pixel_y < 4 and (pixel_x = 1 or pixel_x = 5)) or
 			(pixel_y > 3 and pixel_y /= 6 and (pixel_x = 2 or pixel_x = 4)) or
 			(pixel_y = 6 and pixel_x = 3))) then
 			return true;
-		elsif(C = VGA_W and (
+		elsif(C = CHAR_W and (
 			pixel_x = 0 or pixel_x = 3 or
-			(pixel_y < 2 pixel_x = 6) or
+			(pixel_y < 2 and pixel_x = 6) or
 			(pixel_y > 1 and pixel_y < 4 and (pixel_x = 2 or pixel_x = 5)) or
 			(pixel_y > 3 and pixel_y /= 6 and (pixel_x = 1 or pixel_x = 4)))) then
 			return true;
-		elsif(C = VGA_O and (
+		elsif(C = CHAR_O and (
 			(pixel_x = 1 and (pixel_y = 1 or pixel_y = 5)) or
 			(pixel_x = 5 and (pixel_y = 1 or pixel_y = 5)) or
 			(pixel_y > 1 and pixel_y < 5 and (pixel_x = 0 or pixel_x = 6)) or
 			(pixel_x > 1 and pixel_x < 5 and (pixel_y = 0 or pixel_y = 6)))) then
 			return true;
-		elsif(C = VGA_N and (
+		elsif(C = CHAR_N and (
 			pixel_x = 0 or pixel_x = 5 or
-			pixel_x /= 6 and (pixel_y = pixel_x or pixel_y = pixel_x + 1))) then
+			(pixel_x /= 6 and (pixel_y = pixel_x or pixel_y = pixel_x + 1)))) then
 			return true;
-		elsif(C = VGA_S and (
+		elsif(C = CHAR_S and (
 			(pixel_y = 0 and pixel_x > 1 and pixel_x /= 6) or
 			(pixel_y = 6 and pixel_x /= 0 and pixel_x < 5) or
 			(pixel_y = 3 and pixel_x > 1 and pixel_x < 5) or
 			(pixel_x = 1 and (pixel_y = 1 or pixel_y = 2)) or
 			(pixel_x = 5 and (pixel_y = 4 or pixel_y = 5)))) then
 			return true;
-		elsif(C = VGA_T and (
+		elsif(C = CHAR_T and (
 			(pixel_x = 3) or
 			(pixel_y = 0 and pixel_x /= 0 and pixel_x /= 6))) then
 			return true;
-		elsif(C = VGA_I and (
+		elsif(C = CHAR_I and (
 			(pixel_x = 3) or
-			((pixel_y = 0 or pixel_y = 6) and pixel_x = 2 and pixel_x = 4))) then
+			((pixel_y = 0 or pixel_y = 6) and (pixel_x = 2 or pixel_x = 4)))) then
 			return true;
-		elsif(C = VGA_A and (
-			(pixel_y = 4 and pixel_x \= 0 and pixel_x \= 6) or
+		elsif(C = CHAR_A and (
+			(pixel_y = 4 and pixel_x /= 0 and pixel_x /= 6) or
 			(pixel_y > 4 and (pixel_x = 0 or pixel_x = 6)) or
 			(pixel_y > 2 and pixel_y < 5 and (pixel_x = 1 or pixel_x = 5)) or
 			(pixel_y /= 0 and pixel_y < 3 and (pixel_x = 2 or pixel_x = 4)) or
-			(pixel_y = 6 and pixel_x = 3))) then
+			(pixel_y = 0 and pixel_x = 3))) then
 			return true;
-		elsif(C = VGA_R and (
+		elsif(C = CHAR_R and (
 			(pixel_x = 1) or
 			((pixel_y = 0 or pixel_y = 3) and pixel_x < 5 and pixel_x /= 0) or
 			(pixel_x = 5 and (pixel_y = 1 or pixel_y = 2)) or

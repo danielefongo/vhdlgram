@@ -94,23 +94,39 @@ begin
 			status_register <= IDLE;
 			STATUS <= IDLE;
 		elsif(rising_edge(CLOCK)) then
-			if(SW(9 downto 6) = "1000" and level_register /= 0) then
+			if(SW(9 downto 2) = "10000000" and level_register /= 0) then
 				LEVEL <= 0;
 				level_register <= 0;
 				status_register <= LOAD;
-			elsif(SW(9 downto 6) = "0100" and level_register /= 1) then
+			elsif(SW(9 downto 2) = "01000000" and level_register /= 1) then
 				LEVEL <= 1;
 				level_register <= 1;
 				status_register <= LOAD;
-			elsif(SW(9 downto 6) = "0010" and level_register /= 2) then
+			elsif(SW(9 downto 2) = "00100000" and level_register /= 2) then
 				LEVEL <= 2;
 				level_register <= 2;
 				status_register <= LOAD;
-			elsif(SW(9 downto 6) = "0001" and level_register /= 3) then
+			elsif(SW(9 downto 2) = "00010000" and level_register /= 3) then
 				LEVEL <= 3;
 				level_register <= 3;
 				status_register <= LOAD;
-			elsif(SW(9 downto 6) = "0000") then
+			elsif(SW(9 downto 2) = "00001000" and level_register /= 4) then
+				LEVEL <= 4;
+				level_register <= 4;
+				status_register <= LOAD;
+			elsif(SW(9 downto 2) = "00000100" and level_register /= 5) then
+				LEVEL <= 5;
+				level_register <= 5;
+				status_register <= LOAD;
+			elsif(SW(9 downto 2) = "00000010" and level_register /= 6) then
+				LEVEL <= 6;
+				level_register <= 6;
+				status_register <= LOAD;
+			elsif(SW(9 downto 2) = "00000001" and level_register /= 7) then
+				LEVEL <= 7;
+				level_register <= 7;
+				status_register <= LOAD;
+			elsif(SW(9 downto 2) = "00000000") then
 				LEVEL <= -1;
 				level_register <= -1;
 				status_register <= IDLE;

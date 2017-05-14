@@ -56,7 +56,9 @@ begin
 		variable clue_x				: integer range 0 to MAX_LINE - 1 := 0;
 		variable clue_y				: integer range 0 to MAX_LINE - 1 := 0;
 		variable clue					: integer range -1 to MAX_CLUE;
-
+		variable status_x				: integer range 0 to VISIBLE_WIDTH / CELL_SIZE := 0;
+		variable status_y				: integer range 0 to VISIBLE_HEIGHT / CELL_SIZE := 0;
+		
 	begin
 		if(RESET_N = '0') then
 			old_x := 0;
@@ -160,68 +162,54 @@ begin
 							elsif(y > 2 * PADDING + CELL_SIZE * rows and x > 2 * PADDING + CELL_SIZE * columns) then
 
 								--variable usage optimization
-								clue_x := (x - 2 * PADDING - CELL_SIZE * columns) / CELL_SIZE;
-								clue_y := (y - 2 * PADDING - CELL_SIZE * rows) / CELL_SIZE;
+								status_x := (x - 2 * PADDING - CELL_SIZE * columns) / CELL_SIZE;
+								status_y := (y - 2 * PADDING - CELL_SIZE * rows) / CELL_SIZE;
 
 								cell_x := (x - 2 * PADDING - CELL_SIZE * columns) mod CELL_SIZE;
 								cell_y := (y - 2 * PADDING - CELL_SIZE * rows) mod CELL_SIZE;
 
 								if(cell_x >= LINE_WIDTH and cell_y >= LINE_WIDTH) then
 									--DRAW LEVEL
-									if(clue_y = 1) then
-										if((clue_x = 1 or clue_x = 5) and draw_char(VGA_L, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
+									if(status_y = 1) then
+										if(((status_x = 1 or status_x = 5) and draw_char(CHAR_L, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) or
+											((status_x = 2 or status_x = 4) and draw_char(CHAR_E, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) or
+											(status_x = 3 and draw_char(CHAR_V, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH))) then
 											send_color(TEAL);
-										elsif((clue_x = 2 or clue_x = 4) and draw_char(VGA_E, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
-											send_color(TEAL);
-										elsif(clue_x = 3 and draw_char(VGA_V, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
-											send_color(TEAL);
-										elsif(clue_x = 8 and draw_number(LEVEL, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
-											send_color(TEAL);
+										elsif(status_x = 12 and draw_number(LEVEL, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
+											send_color(WHITE);
 										else
 											send_color(BLACK);
 										end if;
 									--DRAW ITERATION
-									if(clue_y = 2) then
-										if((clue_x = 1 or clue_x = 7) and draw_char(VGA_I, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
+									elsif(status_y = 2) then
+										if(((status_x = 1 or status_x = 7) and draw_char(CHAR_I, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) or
+											((status_x = 2 or status_x = 6) and draw_char(CHAR_T, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) or
+											(status_x = 3 and draw_char(CHAR_E, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) or
+											(status_x = 4 and draw_char(CHAR_R, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) or
+											(status_x = 5 and draw_char(CHAR_A, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) or
+											(status_x = 8 and draw_char(CHAR_O, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) or
+											(status_x = 9 and draw_char(CHAR_N, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH))) then
 											send_color(TEAL);
-										elsif((clue_x = 2 or clue_x = 6) and draw_char(VGA_T, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
-											send_color(TEAL);
-										elsif(clue_x = 3 and draw_char(VGA_E, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
-											send_color(TEAL);
-										elsif(clue_x = 4 and draw_char(VGA_R, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
-											send_color(TEAL);
-										elsif(clue_x = 5 and draw_char(VGA_A, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
-											send_color(TEAL);
-										elsif(clue_x = 8 and draw_char(VGA_O, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
-											send_color(TEAL);
-										elsif(clue_x = 9 and draw_char(VGA_N, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
-											send_color(TEAL);
-										elsif(clue_x = 11 and ITERATION > 10 draw_digitITERATION / 10, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
-											send_color(TEAL);
-										elsif(clue_x = 12 draw_digitITERATION mod 10, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
-											send_color(TEAL);
+										elsif((status_x = 11 and ITERATION > 9 and draw_digit(ITERATION / 10, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) or
+											(status_x = 12 and draw_digit(ITERATION mod 10, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH))) then
+											send_color(WHITE);
 										else
 											send_color(BLACK);
 										end if;
 									--DRAW STATUS
-									elsif(clue_y = 4 and STATUS = WON) then
-										if(clue_x = 10 and draw_char(VGA_W, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
-											send_color(GREEN);
-										elsif(clue_x = 11 and draw_char(VGA_O, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
-											send_color(GREEN);
-										elsif(clue_x = 12 and draw_char(VGA_N, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
+									elsif(status_y = 4 and STATUS = WON) then
+										if((status_x = 10 and draw_char(CHAR_W, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) or
+											(status_x = 11 and draw_char(CHAR_O, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) or
+											(status_x = 12 and draw_char(CHAR_N, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH))) then
 											send_color(GREEN);
 										else
 											send_color(BLACK);
 										end if;
-									elsif(clue_y = 3 and STATUS = LOST) then
-										if(clue_x = 9 and draw_char(VGA_L, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
-											send_color(RED);
-										elsif(clue_x = 10 and draw_char(VGA_O, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
-											send_color(RED);
-										elsif(clue_x = 11 and draw_char(VGA_S, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
-											send_color(RED);
-										elsif(clue_x = 12 and draw_char(VGA_T, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
+									elsif(status_y = 4 and STATUS = LOST) then
+										if((status_x = 9 and draw_char(CHAR_L, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) or
+											(status_x = 10 and draw_char(CHAR_O, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) or
+											(status_x = 11 and draw_char(CHAR_S, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) or
+											(status_x = 12 and draw_char(CHAR_T, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH))) then
 											send_color(RED);
 										else
 											send_color(BLACK);
@@ -229,6 +217,8 @@ begin
 									else
 										send_color(BLACK);
 									end if;
+								else
+									send_color(BLACK);
 								end if;
 
 							else --rest of the window

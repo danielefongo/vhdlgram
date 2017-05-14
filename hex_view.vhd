@@ -10,7 +10,7 @@ entity hex_view is
 		CLOCK					: 	in std_logic;
 		RESET_N				: 	in std_logic;
 
-		ITERATION			:	in	integer range 0 to MAX_ITERATION;
+		--ITERATION			:	in	integer range 0 to MAX_ITERATION;
 		UNDEFINED_CELLS	:	in integer range 0 to MAX_LINE * MAX_LINE;
 
 		--HEX7					: out std_logic_vector(6 downto 0);

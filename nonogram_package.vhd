@@ -6,12 +6,12 @@ use ieee.std_logic_1164.all;
 package nonogram_package is
 
 	--CONSTANTS
-	constant MAX_LINE					: integer := 10;
-	constant MAX_CLUE_LINE			: integer := 5; -- CEIL(MAX_LINE / 2)
+	constant MAX_LINE					: integer := 8;
+	constant MAX_CLUE_LINE			: integer := 4; -- CEIL(MAX_LINE / 2)
 	
 	constant MAX_CLUE					: integer := 19;
-	constant MAX_LEVEL				: integer := 4;
-	constant MAX_ITERATION			: integer := 30;
+	constant MAX_LEVEL				: integer := 8;
+	constant MAX_ITERATION			: integer := 100;
 	constant WR_PERIOD				: integer := 8;
 	
 	--TYPES
@@ -91,21 +91,22 @@ package nonogram_package is
 	constant LEVEL_INPUT : level_array_type :=
 	(
 		(
-			dim 				=> (5,4),
+			dim 				=> (5,5),
 			clues				=> 
 			(
 				(
-					(5, others => -1),
-					(1,1, others => -1),
-					(1,1, others => -1),
+					(2, others => -1),
+					(2,1, others => -1),
+					(4, others => -1),
+					(2, others => -1),
 					(1,1, others => -1),
 					others => (others => -1)
 				),
 				(
-					(1, others => -1),
+					(2,1, others => -1),
 					(4, others => -1),
-					(1, others => -1),
-					(4, others => -1),
+					(1,2, others => -1),
+					(1,1, others => -1),
 					(1, others => -1),
 					others => (others => -1)
 				)
@@ -120,34 +121,237 @@ package nonogram_package is
 			)
 		),
 		(
-			dim 				=> (3,3),
+			dim 				=> (5,5),
 			clues				=> 
 			(
 				(
-					(1,1, others => -1),
 					(1, others => -1),
+					(3,1, others => -1),
+					(4, others => -1),
+					(1,1, others => -1),
 					(1,1, others => -1),
 					others => (others => -1)
 				),
 				(
-					(1,1, others => -1),
+					(4, others => -1),
+					(3, others => -1),
+					(4, others => -1),
 					(1, others => -1),
+					(1, others => -1),
+					others => (others => -1)
+				)
+			),
+			full_cells		=>
+			(
+				others => (-1, -1)
+			),
+			empty_cells		=>
+			(
+				others => (-1, -1)
+			)
+		),
+		(
+			dim 				=> (4,6),
+			clues				=> 
+			(
+				(
+					(3, others => -1),
+					(2, others => -1),
+					(1,1, others => -1),
+					(2, others => -1),
+					(3, others => -1),
+					(1,1, others => -1),
+					others => (others => -1)
+				),
+				(
+					(1,1,2, others => -1),
+					(1,2, others => -1),
+					(6, others => -1),
+					(1, others => -1),
+					others => (others => -1)
+				)
+			),
+			full_cells		=>
+			(
+				others => (-1, -1)
+			),
+			empty_cells		=>
+			(
+				others => (-1, -1)
+			)
+		),
+		(
+			dim 				=> (8,7),
+			clues				=> 
+			(
+				(
+					(1, others => -1),
+					(1, others => -1),
+					(2,2, others => -1),
+					(1,5, others => -1),
+					(8, others => -1),
+					(6, others => -1),
+					(2,3, others => -1),
+					others => (others => -1)
+				),
+				(
+					(2, others => -1),
+					(1,1,1, others => -1),
+					(7, others => -1),
+					(3, others => -1),
+					(5, others => -1),
+					(5, others => -1),
+					(4, others => -1),
+					(2, others => -1),
+					others => (others => -1)
+				)
+			),
+			full_cells		=>
+			(
+				others => (-1, -1)
+			),
+			empty_cells		=>
+			(
+				others => (-1, -1)
+			)
+		),
+		(
+			dim 				=> (7,7),
+			clues				=> 
+			(
+				(
+					(1, others => -1),
+					(3, others => -1),
+					(2,2, others => -1),
+					(2,2, others => -1),
+					(5, others => -1),
+					(1,1,1, others => -1),
+					(1,3, others => -1),
+					others => (others => -1)
+				),
+				(
+					(1, others => -1),
+					(5, others => -1),
+					(2,1, others => -1),
+					(2,3, others => -1),
+					(2,1,1, others => -1),
+					(5, others => -1),
+					(1, others => -1),
+					others => (others => -1)
+				)
+			),
+			full_cells		=>
+			(
+				others => (-1, -1)
+			),
+			empty_cells		=>
+			(
+				others => (-1, -1)
+			)
+		),
+		(
+			dim 				=> (7,8),
+			clues				=> 
+			(
+				(
+					(1,1, others => -1),
+					(3, others => -1),
+					(3, others => -1),
+					(4, others => -1),
+					(6, others => -1),
+					(5, others => -1),
+					(1,1,3, others => -1),
+					(6, others => -1),
+					others => (others => -1)
+				),
+				(
+					(3,1, others => -1),
+					(4,1, others => -1),
+					(8, others => -1),
+					(3,1, others => -1),
+					(5, others => -1),
+					(4, others => -1),
+					(4, others => -1),
+					others => (others => -1)
+				)
+			),
+			full_cells		=>
+			(
+				others => (-1, -1)
+			),
+			empty_cells		=>
+			(
+				others => (-1, -1)
+			)
+		),
+		(
+			dim 				=> (8,8),
+			clues				=> 
+			(
+				(
+					(5, others => -1),
+					(5, others => -1),
+					(5, others => -1),
+					(1, others => -1),
+					(1, others => -1),
+					(1, others => -1),
+					(1, others => -1),
+					(1, others => -1),
+					others => (others => -1)
+				),
+				(
+					(3, others => -1),
+					(3, others => -1),
+					(3, others => -1),
+					(3,1, others => -1),
+					(3,1, others => -1),
+					(1, others => -1),
+					(1, others => -1),
+					(1, others => -1),
+					others => (others => -1)
+				)
+			),
+			full_cells		=>
+			(
+				others => (-1, -1)
+			),
+			empty_cells		=>
+			(
+				others => (-1, -1)
+			)
+		),
+		(
+			dim 				=> (7,5),
+			clues				=> 
+			(
+				(
+					(3,1, others => -1),
+					(2,1,1, others => -1),
+					(1,2,1, others => -1),
+					(2,1,1, others => -1),
+					(3,1, others => -1),
+					others => (others => -1)
+				),
+				(
+					(3, others => -1),
+					(1,1, others => -1),
+					(1,1,1, others => -1),
+					(5, others => -1),
+					(1,1, others => -1),
+					(3, others => -1),
 					(1,1, others => -1),
 					others => (others => -1)
 				)
 			),
 			full_cells		=>
 			(
-				(0,0),
 				others => (-1, -1)
 			),
 			empty_cells		=>
 			(
-				(1,2),
 				others => (-1, -1)
 			)
-		),
-		others => EMPTY_LEVEL
+		)
 	);
 	
 end package;

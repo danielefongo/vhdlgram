@@ -94,7 +94,7 @@ begin
 			CONSTRAINT_QUERY		=> view_constraint_query,
 
 			LEVEL						=> level,
-      ITERATION       => iteration,
+			ITERATION       => iteration,
 			STATUS					=> status
 		);
 
@@ -197,11 +197,13 @@ begin
 		end if;
 	end process;
 
+	/*
 	vga_clock_forward : process(vga_clock)
 	begin
 		VGA_CLK <= vga_clock;
 	end process;
-
+	*/
+	
 	--DEBUGGING
 	--TODO: remove this
 	led_status_debug : process(clock, reset_n)
@@ -247,6 +249,18 @@ begin
 				when 3 =>
 					LEDR(9 downto 6) <= "0001";
 					LEDR(5 downto 0) <= (others => '0');
+				when 4 =>
+					LEDR(9 downto 5) <= "00001";
+					LEDR(4 downto 0) <= (others => '0');
+				when 5 =>
+					LEDR(9 downto 4) <= "000001";
+					LEDR(3 downto 0) <= (others => '0');
+				when 6 =>
+					LEDR(9 downto 3) <= "0000001";
+					LEDR(2 downto 0) <= (others => '0');
+				when 7 =>
+					LEDR(9 downto 2) <= "00000001";
+					LEDR(1 downto 0) <= (others => '0');
 			end case;
 		end if;
 	end process;

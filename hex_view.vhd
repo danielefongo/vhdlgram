@@ -4,65 +4,67 @@ use ieee.numeric_std.all;
 use work.nonogram_package.all;
 
 entity hex_view is
-	
-	port 
+
+	port
 	(
 		CLOCK					: 	in std_logic;
 		RESET_N				: 	in std_logic;
-		
-		ITERATION			:	in	integer range 0 to MAX_ITERATION;
+
+		--ITERATION			:	in	integer range 0 to MAX_ITERATION;
 		UNDEFINED_CELLS	:	in integer range 0 to MAX_LINE * MAX_LINE;
-	
-		HEX7					: out std_logic_vector(6 downto 0);
-		HEX6					: out std_logic_vector(6 downto 0);
+
+		--HEX7					: out std_logic_vector(6 downto 0);
+		--HEX6					: out std_logic_vector(6 downto 0);
 		HEX3					: out std_logic_vector(6 downto 0);
 		HEX2					: out std_logic_vector(6 downto 0);
 		HEX1					: out std_logic_vector(6 downto 0);
 		HEX0					: out std_logic_vector(6 downto 0)
 	);
-	
-	--types
+
+	--TYPES
 	subtype hex_digit	is std_logic_vector(6 downto 0);
-	
-	--functions
+
+	--FUNCTIONS
 	function write_digit(N : integer range 0 to 9) return hex_digit;
-	
+
 end entity;
 
 architecture RTL of hex_view is
 
-	--functions
+	--FUNCTIONS
 	function write_digit(N : integer range 0 to 9) return hex_digit is
 		variable result : hex_digit := (others => '1');
 	begin
 		case(N) is
-			when 0	=> 
+			when 0	=>
 				result := "1000000";
-			when 1	=> 
+			when 1	=>
 				result := "1111001";
-			when 2	=> 
+			when 2	=>
 				result := "0100100";
-			when 3	=> 
+			when 3	=>
 				result := "0110000";
-			when 4	=> 
+			when 4	=>
 				result := "0011001";
-			when 5	=> 
+			when 5	=>
 				result := "0010010";
-			when 6	=> 
+			when 6	=>
 				result := "0000010";
-			when 7	=> 
+			when 7	=>
 				result := "1111000";
-			when 8	=> 
+			when 8	=>
 				result := "0000000";
-			when 9	=> 
+			when 9	=>
 				result := "0010000";
 		end case;
-		
+
 		return result;
 	end;
 
 begin
 
+	--PROCESSES
+	/*
 	iteration_write : process(CLOCK, RESET_N)
 	begin
 		if(RESET_N = '0') then
@@ -76,9 +78,10 @@ begin
 				HEX7 <= write_digit(ITERATION / 10);
 				HEX6 <= write_digit(ITERATION mod 10);
 			end if;
-			
+
 		end if;
 	end process;
+	*/
 	
 	undefined_cells_write : process(CLOCK, RESET_N)
 	begin
@@ -94,5 +97,5 @@ begin
 			HEX0 <= write_digit(UNDEFINED_CELLS mod 10);
 		end if;
 	end process;
-	
+
 end architecture;

@@ -7,7 +7,7 @@ package vga_package is
 	--TYPES
 	subtype color_type is std_logic_vector(0 to 23);
 
-	type vga_char is (VGA_L, VGA_E, VGA_V, VGA_W, VGA_O, VGA_N, VGA_S, VGA_T);
+	type vga_char is (VGA_L, VGA_E, VGA_V, VGA_W, VGA_O, VGA_N, VGA_S, VGA_T, VGA_I, VGA_R, VGA_A);
 	attribute enum_encoding of vga_char : type is "sequential";
 
 	--CONSTANTS
@@ -34,7 +34,7 @@ package vga_package is
 	constant WINDOW_VERTICAL_END: integer := VERTICAL_FRONT_PORCH + VERTICAL_SYNC_PULSE + VISIBLE_HEIGHT;--492
 
 	--nonogram
-	constant CELL_SIZE		:	integer 		:= 9;
+	constant CELL_SIZE		:	integer 	:= 9;
 	constant CONTENT_SIZE	:	integer		:= 7;
 	constant LINE_WIDTH		:	integer		:= CELL_SIZE - CONTENT_SIZE;
 	constant PADDING			:	integer		:= CELL_SIZE * 2;
@@ -140,10 +140,10 @@ package body vga_package is
 			(pixel_y = 6 and pixel_x /= 0 and pixel_x /= 6)) then
 			return true;
 		elsif(C = VGA_E and (
-		(pixel_x = 1) or
-		(pixel_y = 0 and pixel_x /= 0 and pixel_x /= 6) or
-		(pixel_y = 3 and pixel_x /= 0 and pixel_x < 4) or
-		(pixel_y = 6 and pixel_x /= 0 and pixel_x /= 6))) then
+			(pixel_x = 1) or
+			(pixel_y = 0 and pixel_x /= 0 and pixel_x /= 6) or
+			(pixel_y = 3 and pixel_x /= 0 and pixel_x < 4) or
+			(pixel_y = 6 and pixel_x /= 0 and pixel_x /= 6))) then
 			return true;
 		elsif(C = VGA_V and (
 			(pixel_y < 2 and (pixel_x = 0 or pixel_x = 6)) or
@@ -177,6 +177,23 @@ package body vga_package is
 		elsif(C = VGA_T and (
 			(pixel_x = 3) or
 			(pixel_y = 0 and pixel_x /= 0 and pixel_x /= 6))) then
+			return true;
+		elsif(C = VGA_I and (
+			(pixel_x = 3) or
+			((pixel_y = 0 or pixel_y = 6) and pixel_x = 2 and pixel_x = 4))) then
+			return true;
+		elsif(C = VGA_A and (
+			(pixel_y = 4 and pixel_x \= 0 and pixel_x \= 6) or
+			(pixel_y > 4 and (pixel_x = 0 or pixel_x = 6)) or
+			(pixel_y > 2 and pixel_y < 5 and (pixel_x = 1 or pixel_x = 5)) or
+			(pixel_y /= 0 and pixel_y < 3 and (pixel_x = 2 or pixel_x = 4)) or
+			(pixel_y = 6 and pixel_x = 3))) then
+			return true;
+		elsif(C = VGA_R and (
+			(pixel_x = 1) or
+			((pixel_y = 0 or pixel_y = 3) and pixel_x < 5 and pixel_x /= 0) or
+			(pixel_x = 5 and (pixel_y = 1 or pixel_y = 2)) or
+			(pixel_x > 2 and pixel_y > 3 and pixel_x + 1 = pixel_y))) then
 			return true;
 		else
 			return false;

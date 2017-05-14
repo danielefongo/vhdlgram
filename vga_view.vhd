@@ -25,6 +25,7 @@ entity vga_view is
 		CONSTRAINT_QUERY	: 	out query_type;
 
 		LEVEL					: 	in integer range -1 to MAX_LEVEL;
+		ITERATION			: in integer range 0 to MAX_ITERATION;
 		STATUS				:	in status_type
 	);
 
@@ -166,6 +167,7 @@ begin
 								cell_y := (y - 2 * PADDING - CELL_SIZE * rows) mod CELL_SIZE;
 
 								if(cell_x >= LINE_WIDTH and cell_y >= LINE_WIDTH) then
+									--DRAW LEVEL
 									if(clue_y = 1) then
 										if((clue_x = 1 or clue_x = 5) and draw_char(VGA_L, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
 											send_color(TEAL);
@@ -173,29 +175,53 @@ begin
 											send_color(TEAL);
 										elsif(clue_x = 3 and draw_char(VGA_V, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
 											send_color(TEAL);
-										elsif(clue_x = 7 and draw_number(LEVEL, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
+										elsif(clue_x = 8 and draw_number(LEVEL, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
 											send_color(TEAL);
 										else
 											send_color(BLACK);
 										end if;
-									elsif(clue_y = 3 and STATUS = WON) then
-										if(clue_x = 1 and draw_char(VGA_W, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
+									--DRAW ITERATION
+									if(clue_y = 2) then
+										if((clue_x = 1 or clue_x = 7) and draw_char(VGA_I, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
+											send_color(TEAL);
+										elsif((clue_x = 2 or clue_x = 6) and draw_char(VGA_T, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
+											send_color(TEAL);
+										elsif(clue_x = 3 and draw_char(VGA_E, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
+											send_color(TEAL);
+										elsif(clue_x = 4 and draw_char(VGA_R, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
+											send_color(TEAL);
+										elsif(clue_x = 5 and draw_char(VGA_A, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
+											send_color(TEAL);
+										elsif(clue_x = 8 and draw_char(VGA_O, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
+											send_color(TEAL);
+										elsif(clue_x = 9 and draw_char(VGA_N, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
+											send_color(TEAL);
+										elsif(clue_x = 11 and ITERATION > 10 draw_digitITERATION / 10, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
+											send_color(TEAL);
+										elsif(clue_x = 12 draw_digitITERATION mod 10, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
+											send_color(TEAL);
+										else
+											send_color(BLACK);
+										end if;
+									--DRAW STATUS
+									elsif(clue_y = 4 and STATUS = WON) then
+										if(clue_x = 10 and draw_char(VGA_W, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
 											send_color(GREEN);
-										elsif(clue_x = 2 and draw_char(VGA_O, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
+										elsif(clue_x = 11 and draw_char(VGA_O, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
 											send_color(GREEN);
-										elsif(clue_x = 3 and draw_char(VGA_N, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
+										elsif(clue_x = 12 and draw_char(VGA_N, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
 											send_color(GREEN);
 										else
 											send_color(BLACK);
 										end if;
 									elsif(clue_y = 3 and STATUS = LOST) then
-										if(clue_x = 1 and draw_char(VGA_L, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
+										if(clue_x = 9 and draw_char(VGA_L, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
 											send_color(RED);
-										elsif(clue_x = 2 and draw_char(VGA_O, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
+										elsif(clue_x = 10 and draw_char(VGA_O, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
 											send_color(RED);
-										elsif(clue_x = 3 and draw_char(VGA_S, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
+										elsif(clue_x = 11 and draw_char(VGA_S, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
 											send_color(RED);
-										elsif(clue_x = 4 and draw_char(VGA_T, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
+										elsif(clue_x = 12 and draw_char(VGA_T, cell_x - LINE_WIDTH, cell_y - LINE_WIDTH)) then
 											send_color(RED);
 										else
 											send_color(BLACK);
